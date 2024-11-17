@@ -1,3 +1,4 @@
+# Juste l'aspect de base IDE
 from tkinter import *
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 
