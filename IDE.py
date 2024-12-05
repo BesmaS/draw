@@ -4,11 +4,16 @@ from tkinter.filedialog import asksaveasfilename, askopenfilename
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *#nv
 
+from math import cos, sin, radians
+
 # Initialisation de la fenêtre principale
 compiler = ttk.Window(themename="flatly")  # Choose theme NV
 compiler.title('🎨Draw++ IDE')
 compiler.geometry("800x600")
 file_path = ''
+
+canvas = Canvas(compiler, bg="white", width=600, height=400)
+canvas.pack(side="top", expand=True, fill="both")
 
 
 # Fonctions de gestion des fichiers
@@ -82,6 +87,7 @@ def toggle_theme():
         line_number_bar.config(bg="white", fg="black")
         compiler.config(bg="SystemButtonFace")
 
+
 # Fonction pour exécuter le code (placeholder) revoir qd grammaire ok
 def run():
     output_display.delete('1.0', END)
@@ -122,3 +128,75 @@ status_bar = Label(compiler, text="Draw++ IDE - Ready", anchor=W, relief=SUNKEN)
 status_bar.pack(side=BOTTOM, fill=X)
 
 compiler.mainloop()
+
+
+
+def draw_shape(shape_type, x, y, **kwargs):
+    color = kwargs.get('color', 'black')
+    width = kwargs.get('width', 2)
+
+    if shape_type == "line":
+        x2 = kwargs.get('x2', x + 50)
+        y2 = kwargs.get('y2', y)
+        canvas.create_line(x, y, x2, y2, fill=color, width=width)
+    elif shape_type == "rectangle":
+        x2 = kwargs.get('x2', x + 50)
+        y2 = kwargs.get('y2', y + 50)
+        canvas.create_rectangle(x, y, x2, y2, outline=color, width=width)
+    elif shape_type == "oval":  # dessine un cercle lorsque x2 et y2 sont identiques
+        x2 = kwargs.get('x2', x + 50)
+        y2 = kwargs.get('y2', y + 50)
+        canvas.create_oval(x, y, x2, y2, outline=color, width=width)
+    elif shape_type == "point":
+        canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill=color, width=width)
+    else:
+        print(f"La forme '{shape_type}' n'existe pas.") 
+        
+        
+cursors = [] # Liste pour stocker les curseurs
+
+
+
+def create_cursor(x=0, y=0, visible=True, color="black", width=2):
+    cursor = {
+        "x": x,
+        "y": y,
+        "visible": visible,
+        "color": color,
+        "width": width
+    }
+    cursors.append(cursor)
+    if visible:
+        canvas.create_oval(x - 3, y - 3, x + 3, y + 3, fill=color)
+  
+
+def move_cursor(cursor, distance):
+    # Calcul de la nouvelle position
+    new_x = cursor["x"] + distance * cos(radians(cursor["angle"]))
+    new_y = cursor["y"] + distance * sin(radians(cursor["angle"]))
+    
+    canvas.create_line(cursor["x"], cursor["y"], new_x, new_y, fill="black", width=2)    # Dessine une ligne entre l'ancienne et nouvelle position
+    
+    cursor["x"] = new_x # Met à jour la nouvelle position du curseur
+    cursor["y"] = new_y
+
+def rotate_cursor(cursor, angle):
+    cursor["angle"] = (cursor["angle"] + angle) % 360 # Met à jour l'angle du curseur
+
+def set_cursor_visibility(index, visible):
+    if 0 <= index < len(cursors):
+        cursors[index]["visible"] = visible # le visibilité du curseur est mis à jour
+        if visible:
+            cursor = cursors[index]
+            canvas.create_oval(
+                cursor["x"] - 3, cursor["y"] - 3, cursor["x"] + 3, cursor["y"] + 3,     # Dessine le curseur
+                fill=cursor["color"]
+            )
+        else:
+            canvas.delete("all")  # Supprime tout du canevas 
+            for cur in cursors:
+                if cur["visible"]:
+                    canvas.create_oval(
+                        cur["x"] - 3, cur["y"] - 3, cur["x"] + 3, cur["y"] + 3,     # redessine uniquement les curseurs visibles
+                        fill=cur["color"]
+                    )
