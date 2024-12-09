@@ -1,37 +1,33 @@
 # Juste l'aspect de base IDE
 from tkinter import *
 from tkinter.filedialog import asksaveasfilename, askopenfilename
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *#nv
+import ttkbootstrap as ttk # type: ignore
+from ttkbootstrap.constants import *# type: ignore #nv
+from tokenizer import tokenize # type: ignore
+from parser import Parser # type: ignore
 
-from math import cos, sin, radians
-
-# Initialisation de la fenêtre principale
+# Initialisation de la fenetre principale
 compiler = ttk.Window(themename="flatly")  # Choose theme NV
 compiler.title('🎨Draw++ IDE')
 compiler.geometry("800x600")
 file_path = ''
-
-canvas = Canvas(compiler, bg="white", width=600, height=400)
-canvas.pack(side="top", expand=True, fill="both")
-
 
 # Fonctions de gestion des fichiers
 def set_file_path(path):
     global file_path
     file_path = path
 
-#initialisatioon des numéros de ligne 
+#initialisatioon des numeros de ligne 
 def update_line_number(event=None):
     line_numbers = ""
-    for i in range(1, int(editor.index('end').split('.')[0])):  # Nombre de lignes dans l'éditeur
+    for i in range(1, int(editor.index('end').split('.')[0])):  # Nombre de lignes dans l'editeur
         line_numbers += f"{i}\n"
-    line_number_bar.config(state='normal')  # Permet d'écrire dans le widget
+    line_number_bar.config(state='normal')  # Permet d'ecrire dans le widget
     line_number_bar.delete('1.0', END)  # Supprime l'ancien contenu
-    line_number_bar.insert('1.0', line_numbers)  # Ajoute les numéros de ligne
-    line_number_bar.config(state='disabled')  # Empêche la modification
+    line_number_bar.insert('1.0', line_numbers)  # Ajoute les numeros de ligne
+    line_number_bar.config(state='disabled')  # Empeche la modification
 
-# Numéro de ligne (barre à gauche)
+# Numero de ligne (barre a gauche)
 line_number_bar = Text(compiler, width=4, bg="lightgrey", state='disabled')
 line_number_bar.pack(side="left", fill="y")
 
@@ -79,7 +75,7 @@ def toggle_theme():
     if is_dark_mode:
         editor.config(bg="black", fg="light gray", insertbackground="light gray")
         output_display.config(bg="black", fg="white")  # Noir pour le fond, blanc pour le texte
-        line_number_bar.config(bg="dim gray", fg="white")  # Gris foncé pour la barre de numéros
+        line_number_bar.config(bg="dim gray", fg="white")  # Gris fonce pour la barre de numeros
         compiler.config(bg="gray20")
     else:
         editor.config(bg="white", fg="black", insertbackground="black")
@@ -88,13 +84,54 @@ def toggle_theme():
         compiler.config(bg="SystemButtonFace")
 
 
-# Fonction pour exécuter le code (placeholder) revoir qd grammaire ok
+def update_syntax_highlighting(event=None):
+    """
+    Tokenize the code and apply syntax highlighting.
+    """
+    code = editor.get("1.0", END)
+    tokens = tokenize(code)
+    
+    # Remove previous tags
+    editor.tag_remove("KEYWORD", "1.0", "end")
+    editor.tag_remove("IDENTIFIER", "1.0", "end")
+    editor.tag_remove("NUMBER", "1.0", "end")
+    editor.tag_remove("HEX_COLOR", "1.0", "end")
+    editor.tag_remove("OPERATOR", "1.0", "end")
+    
+    # Apply new tags based on token types
+    for token in tokens:
+        start_index = f"{token.line}.{token.column}"
+        end_index = f"{token.line}.{token.column + len(token.value)}"
+        
+        if token.type == 'KEYWORD':
+            editor.tag_add("KEYWORD", start_index, end_index)
+        elif token.type == 'IDENTIFIER':
+            editor.tag_add("IDENTIFIER", start_index, end_index)
+        elif token.type == 'NUMBER':
+            editor.tag_add("NUMBER", start_index, end_index)
+        elif token.type == 'HEX_COLOR':
+            editor.tag_add("HEX_COLOR", start_index, end_index)
+        elif token.type == 'OPERATOR':
+            editor.tag_add("OPERATOR", start_index, end_index)
+
 def run():
-    output_display.delete('1.0', END)
-    output_display.insert('1.0', "Execution of Draw++ code will go here.")
+    code = editor.get("1.0", END)
+    try:
+        tokens = tokenize(code)
+        parser = Parser(tokens)
+        parsed_output = parser.parse_program()
+        output_display.delete('1.0', END)
+        output_display.insert('1.0', f"Parsed Output:\n{parsed_output}")
+    except SyntaxError as e:
+        output_display.delete('1.0', END)
+        output_display.insert('1.0', f"Syntax Error: {str(e)}")
+    except Exception as e:
+        output_display.delete('1.0', END)
+        output_display.insert('1.0', f"Error: {str(e)}")
 
 
-# Création des menus
+
+# Creation des menus
 menu_bar = Menu(compiler)
 
 file_menu = Menu(menu_bar, tearoff=0)
@@ -119,7 +156,8 @@ compiler.config(menu=menu_bar)
 # Zones de texte
 editor = Text(compiler, wrap="word", undo=True)
 editor.pack(expand=True, fill='both')
-editor.bind("<KeyRelease>", update_line_number)  # Met à jour après chaque frappe
+editor.bind("<KeyRelease>", update_line_number)  # Met a jour apres chaque frappe
+
 
 output_display = Text(compiler, height=10, bg="lightgrey", fg="black")
 output_display.pack(fill="both")
@@ -128,75 +166,3 @@ status_bar = Label(compiler, text="Draw++ IDE - Ready", anchor=W, relief=SUNKEN)
 status_bar.pack(side=BOTTOM, fill=X)
 
 compiler.mainloop()
-
-
-
-def draw_shape(shape_type, x, y, **kwargs):
-    color = kwargs.get('color', 'black')
-    width = kwargs.get('width', 2)
-
-    if shape_type == "line":
-        x2 = kwargs.get('x2', x + 50)
-        y2 = kwargs.get('y2', y)
-        canvas.create_line(x, y, x2, y2, fill=color, width=width)
-    elif shape_type == "rectangle":
-        x2 = kwargs.get('x2', x + 50)
-        y2 = kwargs.get('y2', y + 50)
-        canvas.create_rectangle(x, y, x2, y2, outline=color, width=width)
-    elif shape_type == "oval":  # dessine un cercle lorsque x2 et y2 sont identiques
-        x2 = kwargs.get('x2', x + 50)
-        y2 = kwargs.get('y2', y + 50)
-        canvas.create_oval(x, y, x2, y2, outline=color, width=width)
-    elif shape_type == "point":
-        canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill=color, width=width)
-    else:
-        print(f"La forme '{shape_type}' n'existe pas.") 
-        
-        
-cursors = [] # Liste pour stocker les curseurs
-
-
-
-def create_cursor(x=0, y=0, visible=True, color="black", width=2):
-    cursor = {
-        "x": x,
-        "y": y,
-        "visible": visible,
-        "color": color,
-        "width": width
-    }
-    cursors.append(cursor)
-    if visible:
-        canvas.create_oval(x - 3, y - 3, x + 3, y + 3, fill=color)
-  
-
-def move_cursor(cursor, distance):
-    # Calcul de la nouvelle position
-    new_x = cursor["x"] + distance * cos(radians(cursor["angle"]))
-    new_y = cursor["y"] + distance * sin(radians(cursor["angle"]))
-    
-    canvas.create_line(cursor["x"], cursor["y"], new_x, new_y, fill="black", width=2)    # Dessine une ligne entre l'ancienne et nouvelle position
-    
-    cursor["x"] = new_x # Met à jour la nouvelle position du curseur
-    cursor["y"] = new_y
-
-def rotate_cursor(cursor, angle):
-    cursor["angle"] = (cursor["angle"] + angle) % 360 # Met à jour l'angle du curseur
-
-def set_cursor_visibility(index, visible):
-    if 0 <= index < len(cursors):
-        cursors[index]["visible"] = visible # le visibilité du curseur est mis à jour
-        if visible:
-            cursor = cursors[index]
-            canvas.create_oval(
-                cursor["x"] - 3, cursor["y"] - 3, cursor["x"] + 3, cursor["y"] + 3,     # Dessine le curseur
-                fill=cursor["color"]
-            )
-        else:
-            canvas.delete("all")  # Supprime tout du canevas 
-            for cur in cursors:
-                if cur["visible"]:
-                    canvas.create_oval(
-                        cur["x"] - 3, cur["y"] - 3, cur["x"] + 3, cur["y"] + 3,     # redessine uniquement les curseurs visibles
-                        fill=cur["color"]
-                    )
