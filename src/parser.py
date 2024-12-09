@@ -1,3 +1,5 @@
+from tokenizer import Token
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -82,18 +84,11 @@ class Parser:
             raise SyntaxError(f"Invalid cursor instruction '{token.value}'.")
 
     def parse_coordinates(self):
-        
-        #Analyse des coordonnées : <coordonnees> ::= "x" <nombre> "," "y" <nombre>
-        
-        print("Parsing <coordinates>...")
-
         coord_token = self.current_token()
-        if coord_token.type == 'COORDINATE':
-            # Parse single coordinate token like x100, y200
-            value = coord_token.value
-            self.consume('COORDINATE')
-            axis = value[0]  # First character, 'x' or 'y'
-            number = int(value[1:])  # Rest of the string as number
-            return {axis: number}
+        if coord_token.type == 'NUMBER':
+            x_value = int(self.consume('NUMBER').value)
+            self.consume('DELIMITER')  # Consume ','
+            y_value = int(self.consume('NUMBER').value)
+            return {'x': x_value, 'y': y_value}
         else:
-            raise SyntaxError(f"Expected coordinate like 'x100' but got '{coord_token.value}'")
+            raise SyntaxError(f"Expected coordinates but got '{coord_token.value}'")
