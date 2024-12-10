@@ -4,18 +4,23 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
+        # Dictionnaire qui répertorie les initialisations
+        self.declared_entities = {
+            "cursor": set(),  # Pour les curseurs
+            # Ajoutez d'autres types si nécessaire, comme "shape": set()
+        }
 
     def current_token(self):
-        #"\"\"Retourne le token courant ou 'EOF' si fin atteinte.\"\"\"
+        """Retourne le token courant ou 'EOF' si fin atteinte."""
         if self.pos < len(self.tokens):
             return self.tokens[self.pos]
         return Token('EOF', 'EOF', -1, -1)  # Token spécial pour la fin
 
     def consume(self, expected_type):
-        #\"\"\"
-       # Consomme le token actuel s'il correspond au type attendu,
-        #sinon lève une erreur de syntaxe.
-        
+        """
+        Consomme le token actuel s'il correspond au type attendu,
+        sinon lève une erreur de syntaxe.
+        """
         token = self.current_token()
         if token.type == expected_type:
             self.pos += 1
@@ -24,6 +29,22 @@ class Parser:
             raise SyntaxError(
                 f"Expected token type '{expected_type}' but got '{token.type}' at line {token.line}, column {token.column}."
             )
+
+    # Fonction qui vérifie qu'une variable est initialisée
+    def check_entity_declaration(self, entity_type, entity_name, usage_context):
+        """
+        Vérifie si une entité a été déclarée.
+        :param entity_type: Le type de l'entité (e.g., 'cursor').
+        :param entity_name: Le nom de l'entité (e.g., 'cursor1').
+        :param usage_context: Le contexte où l'entité est utilisée (e.g., 'move', 'rotate').
+        """
+        if entity_name not in self.declared_entities.get(entity_type, set()):
+            raise SyntaxError(
+                f"{entity_type.capitalize()} '{entity_name}' used in '{usage_context}' has not been initialized."
+            )
+
+
+
 
     def parse_program(self):
         
@@ -72,10 +93,12 @@ class Parser:
             self.consume('DELIMITER')  # Consume ','
             coordinates = self.parse_coordinates()
             self.consume('DELIMITER')  # Consume ')'
+            self.declared_entities["cursor"].add(identifiant)  # Ajouter le curseur déclaré dans le dic
             return {"type": "createCursor", "identifiant": identifiant, "coordinates": coordinates}
         elif token.value in {"move", "rotate"}:
             self.consume('DELIMITER')  # Consume '('
             identifiant = self.consume('IDENTIFIER').value
+            self.check_entity_declaration("cursor", identifiant, token.value)  
             self.consume('DELIMITER')  # Consume ','
             value = self.consume('NUMBER').value
             self.consume('DELIMITER')  # Consume ')'
