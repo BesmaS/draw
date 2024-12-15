@@ -5,6 +5,10 @@ import ttkbootstrap as ttk # type: ignore
 from ttkbootstrap.constants import *# type: ignore #nv
 from tokenizer import tokenize # type: ignore
 from parser import Parser # type: ignore
+from semantic_analyzer import validate_program  # Importer la fonction validate_program pour effectuer la validation sémantique
+
+
+
 
 # Initialisation de la fenetre principale
 compiler = ttk.Window(themename="flatly")  # Choose theme NV
@@ -119,7 +123,9 @@ def run():
     try:
         tokens = tokenize(code)
         parser = Parser(tokens)
+
         parsed_output = parser.parse_program()
+        validate_program(parsed_output)
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Parsed Output:\n{parsed_output}")
     except SyntaxError as e:
