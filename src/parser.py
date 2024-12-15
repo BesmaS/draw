@@ -146,7 +146,7 @@ class Parser:
         y_value = int(self.consume('NUMBER').value)
         coord_node.add_child(ASTNode("y", y_value))
         return coord_node
-
+#Fonctionne pas bouhhh
     def parse_condition_instruction(self):
         """Analyse une instruction conditionnelle 'if'."""
         print("Parsing <if_instruction>...")
