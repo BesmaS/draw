@@ -74,9 +74,10 @@ class Parser:
         """Analyse un programme complet et retourne un AST."""
         print("Parsing <program>...")
         program_node = ASTNode("program")
-        while self.current_token().type != 'EOF':
+        while self.current_token().type != 'EOF' and not (
+                self.current_token().type == 'DELIMITER' and self.current_token().value == '}'):
             instruction_node = self.parse_instruction()
-            self.consume('DELIMITER')  # Consume ';'
+            self.consume('DELIMITER')  # Consomme ';' (s'il y en a)
             program_node.add_child(instruction_node)
         return program_node
 
@@ -91,7 +92,6 @@ class Parser:
         # Ajout de l'instruction conditionnelle "if"
         elif token.value == "if":
             return self.parse_condition_instruction()
-
 
         # Autres instructions existantes
         elif token.value in {"createCursor", "move", "rotate"}:
@@ -117,7 +117,7 @@ class Parser:
             self.consume('DELIMITER')  # Consume '('
             identifiant = self.consume('IDENTIFIER').value
             node.add_child(ASTNode("identifiant", identifiant))  # Ajoute l'identifiant comme sous-nœud
-            self.consume('DELIMITER')  # Consume ',' 
+            self.consume('DELIMITER')  # Consume ','
             coordinates = self.parse_coordinates()
             node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
             self.consume('DELIMITER')  # Consume ')'
@@ -127,13 +127,12 @@ class Parser:
             identifiant = self.consume('IDENTIFIER').value
             self.check_entity_declaration("cursor", identifiant, token.value)
             node.add_child(ASTNode("identifiant", identifiant))  # Ajoute l'identifiant comme sous-nœud
-            self.consume('DELIMITER')  # Consume ',' 
+            self.consume('DELIMITER')  # Consume ','
             value = int(self.consume('NUMBER').value)
             node.add_child(ASTNode("value", value))  # Ajoute la valeur comme sous-nœud
             self.consume('DELIMITER')  # Consume ')'
         else:
             raise SyntaxError(f"Invalid cursor instruction '{token.value}'.")
-        
         return node
 
     def parse_coordinates(self):
@@ -142,11 +141,11 @@ class Parser:
         coord_node = ASTNode("coordinates")
         x_value = int(self.consume('NUMBER').value)
         coord_node.add_child(ASTNode("x", x_value))
-        self.consume('DELIMITER')  # Consume ',' 
+        self.consume('DELIMITER')  # Consume ','
         y_value = int(self.consume('NUMBER').value)
         coord_node.add_child(ASTNode("y", y_value))
         return coord_node
-#Fonctionne pas bouhhh
+
     def parse_condition_instruction(self):
         """Analyse une instruction conditionnelle 'if'."""
         print("Parsing <if_instruction>...")
@@ -156,6 +155,8 @@ class Parser:
         self.consume('DELIMITER')  # Consomme ')'
         self.consume('DELIMITER')  # Consomme '{'
         program_node = self.parse_program()  # Analyse le programme dans le bloc 'if'
+
+        # Ici, on consomme uniquement la '}' qui marque la fin du bloc if
         self.consume('DELIMITER')  # Consomme '}'
 
         # Vérification de la présence d'un bloc 'else' optionnel
@@ -192,21 +193,30 @@ class Parser:
         assignment_node.add_child(expression_node)
         return assignment_node
 
-    
-
     def parse_expression(self):
         """
-        Analyse une expression arithmétique avec gestion des priorités et des parenthèses.
+        Analyse une expression qui peut inclure des comparateurs et des opérateurs arithmétiques.
         """
-        left = self.parse_term()  # Analyse un premier terme
+        # Analyse un premier terme
+        left = self.parse_term()
 
+        # Gestion des comparateurs (==, !=, <, >, <=, >=)
+        while self.current_token().type == 'OPERATOR':  # Vérifie si c'est un opérateur de comparaison
+            operator = self.consume('OPERATOR').value  # Consomme l'opérateur
+            right = self.parse_term()  # Analyse le terme à droite
+            comparison_node = ASTNode("comparison", operator)
+            comparison_node.add_child(left)
+            comparison_node.add_child(right)
+            left = comparison_node  # Le résultat devient le nouveau "left"
+
+        # Gestion des opérateurs arithmétiques (+, -)
         while self.current_token().type == 'ARITHMETIC_OP' and self.current_token().value in {"+", "-"}:
             operator = self.consume('ARITHMETIC_OP').value  # Consomme '+' ou '-'
             right = self.parse_term()
             operation_node = ASTNode("operation", operator)
             operation_node.add_child(left)
             operation_node.add_child(right)
-            left = operation_node
+            left = operation_node  # Le résultat devient le nouveau "left"
 
         return left
 
@@ -251,6 +261,6 @@ class Parser:
 
         else:
             raise SyntaxError(f"Unexpected token in factor: {token.value}")
-            
+
             
            
