@@ -24,7 +24,7 @@ def collect_declared_entities(ast):
 
 def evaluate_expression(node, declared_variables):
     """
-    Évalue une expression arithmétique à partir de son nœud AST.
+    Évalue une expression arithmétique ou de comparaison à partir de son nœud AST.
     :param node: Nœud AST de l'expression.
     :param declared_variables: Dictionnaire des variables déclarées et leurs valeurs.
     :return: Résultat de l'évaluation.
@@ -51,8 +51,27 @@ def evaluate_expression(node, declared_variables):
             if right == 0:
                 raise ZeroDivisionError("Division by zero.")
             return left / right
+
+    elif node.node_type == "comparison":  # Gestion des comparateurs
+        left = evaluate_expression(node.children[0], declared_variables)
+        right = evaluate_expression(node.children[1], declared_variables)
+
+        if node.value == "==":
+            return left == right
+        elif node.value == "!=":
+            return left != right
+        elif node.value == "<":
+            return left < right
+        elif node.value == ">":
+            return left > right
+        elif node.value == "<=":
+            return left <= right
+        elif node.value == ">=":
+            return left >= right
+
     else:
         raise SyntaxError(f"Unknown expression node: {node.node_type}")
+
 
 def validate_cursor_coordinates(ast):
     """
