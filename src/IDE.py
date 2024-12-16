@@ -95,14 +95,16 @@ def update_syntax_highlighting(event=None):
     code = editor.get("1.0", END)
     tokens = tokenize(code)
     
-    # Remove previous tags
+    # Supprimer les balises précédentes
     editor.tag_remove("KEYWORD", "1.0", "end")
     editor.tag_remove("IDENTIFIER", "1.0", "end")
     editor.tag_remove("NUMBER", "1.0", "end")
     editor.tag_remove("HEX_COLOR", "1.0", "end")
     editor.tag_remove("OPERATOR", "1.0", "end")
+    editor.tag_remove("ARITHMETIC_OP", "1.0", "end")
+    editor.tag_remove("DELIMITER", "1.0", "end")
     
-    # Apply new tags based on token types
+    # Ajouter de nouvelles balises en fonction des tokens
     for token in tokens:
         start_index = f"{token.line}.{token.column}"
         end_index = f"{token.line}.{token.column + len(token.value)}"
@@ -117,6 +119,15 @@ def update_syntax_highlighting(event=None):
             editor.tag_add("HEX_COLOR", start_index, end_index)
         elif token.type == 'OPERATOR':
             editor.tag_add("OPERATOR", start_index, end_index)
+        elif token.type == 'ARITHMETIC_OP':
+            editor.tag_add("ARITHMETIC_OP", start_index, end_index)
+        elif token.type == 'DELIMITER':
+            editor.tag_add("DELIMITER", start_index, end_index)
+
+def on_key_release(event=None): #permet de mettre a jour les n de ligne et applique la coloration en evitant les conflits entre les deux fonctions 
+    
+    update_line_number()  # Mettre à jour les numéros de ligne
+    update_syntax_highlighting()  # Appliquer la coloration syntaxique
 
 def run():
     code = editor.get("1.0", END)
@@ -162,7 +173,17 @@ compiler.config(menu=menu_bar)
 # Zones de texte
 editor = Text(compiler, wrap="word", undo=True)
 editor.pack(expand=True, fill='both')
-editor.bind("<KeyRelease>", update_line_number)  # Met a jour apres chaque frappe
+editor.bind("<KeyRelease>", on_key_release)
+
+
+# Ajout des styles pour la coloration syntaxique
+editor.tag_configure("KEYWORD", foreground="blue")  # Mots-clés
+editor.tag_configure("IDENTIFIER", foreground="magenta")  # Identifiants
+editor.tag_configure("NUMBER", foreground="darkorange")  # Nombres
+editor.tag_configure("HEX_COLOR", foreground="green")  # Couleurs hexadécimales
+editor.tag_configure("OPERATOR", foreground="purple")  # Opérateurs
+editor.tag_configure("ARITHMETIC_OP", foreground="darkred")  # Opérateurs arithmétiques
+editor.tag_configure("DELIMITER", foreground="grey")  # Délimiteurs
 
 
 output_display = Text(compiler, height=10, bg="lightgrey", fg="black")
