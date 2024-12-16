@@ -7,7 +7,7 @@ TOKEN_SPECS = [
     ('NUMBER', r'\b\d+(\.\d+)?\b'),         # Numbers
     ('HEX_COLOR', r'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'),  # Hex colors
     ('OPERATOR', r'==|!=|<=|>=|<|>'),       # Operators
-     ('ARITHMETIC_OP', r'[+-*/]'),          # Opérateurs arithmétiques : +, -, *, /
+     ('ARITHMETIC_OP', r'[+ - * /]'),          # Opérateurs arithmétiques : +, -, *, /
     ('ASSIGN', r'='),  
     ('DELIMITER', r'[(),{};]'),             # Delimiters
     ('SKIP', r'[ \t]+'),                    # Whitespace (ignored)
