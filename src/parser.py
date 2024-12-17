@@ -94,14 +94,11 @@ class Parser:
             return self.parse_condition_instruction()
 
         # Autres instructions existantes
-        elif token.value in {"createCursor", "move", "rotate"}:
+        elif token.value in {"createCursor", "move", "rotate", "setColor", "setThickness"}:
             return self.parse_cursor_instruction()
         elif token.value in {"drawLine", "drawCircle", "drawRectangle", "drawArc"}:
             return self.parse_drawing_instruction()
-        elif token.value == "setColor":
-            return self.parse_color_instruction()
-        elif token.value == "setThickness":
-            return self.parse_thickness_instruction()
+
         elif token.value in {"if", "for", "while"}:
             return self.parse_control_instruction()
         else:
@@ -131,6 +128,28 @@ class Parser:
             value = int(self.consume('NUMBER').value)
             node.add_child(ASTNode("value", value))  # Ajoute la valeur comme sous-nœud
             self.consume('DELIMITER')  # Consume ')'
+        elif token.value == "setColor":
+            self.consume('DELIMITER')  # Consume '('
+            identifiant = self.consume('IDENTIFIER').value
+            self.check_entity_declaration("cursor", identifiant, token.value)
+            node.add_child(ASTNode("identifiant", identifiant))  # Ajoute l'identifiant comme sous-nœud
+            self.consume('DELIMITER')  # Consume ','
+
+            # Consomme une couleur en hexadécimal
+            color = self.consume('HEX_COLOR').value
+            node.add_child(ASTNode("color", color))  # Ajoute la couleur comme sous-nœud
+
+            self.consume('DELIMITER')  # Consume ')'
+        elif token.value == "setThickness":
+            self.consume('DELIMITER')  # Consume '('
+            identifiant = self.consume('IDENTIFIER').value
+            self.check_entity_declaration("cursor", identifiant, token.value)
+            node.add_child(ASTNode("identifiant", identifiant))  # Ajoute l'identifiant comme sous-nœud
+            self.consume('DELIMITER')  # Consume ','
+            thickness = int(self.consume('NUMBER').value)
+            node.add_child(ASTNode("thickness", thickness))  # Ajoute l'épaisseur comme sous-nœud
+            self.consume('DELIMITER')  # Consume ')'
+
         else:
             raise SyntaxError(f"Invalid cursor instruction '{token.value}'.")
         return node
@@ -261,6 +280,3 @@ class Parser:
 
         else:
             raise SyntaxError(f"Unexpected token in factor: {token.value}")
-
-            
-           
