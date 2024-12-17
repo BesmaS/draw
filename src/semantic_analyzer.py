@@ -73,6 +73,27 @@ def evaluate_expression(node, declared_variables):
         raise SyntaxError(f"Unknown expression node: {node.node_type}")
 
 
+def validate_cursor_properties(ast):
+    """
+    Valide les propriétés assignées aux curseurs (couleur, épaisseur).
+    """
+    for node in ast.children:
+        if node.node_type == "setColor":
+            identifiant = next(child for child in node.children if child.node_type == "identifiant").value
+            color = next(child for child in node.children if child.node_type == "color").value
+            
+            # Pas de validation du format ici, car HEX_COLOR est déjà validé par le tokenizer
+            print(f"Cursor '{identifiant}' assigned color '{color}'.")
+
+        elif node.node_type == "setThickness":
+            identifiant = next(child for child in node.children if child.node_type == "identifiant").value
+            thickness = next(child for child in node.children if child.node_type == "thickness").value
+            
+            # Validation de l'épaisseur
+            if thickness <= 0:
+                raise SyntaxError(f"Thickness '{thickness}' for cursor '{identifiant}' must be positive.")
+            print(f"Cursor '{identifiant}' assigned thickness '{thickness}'.")
+
 def validate_cursor_coordinates(ast):
     """
     Parcourt l'AST et vérifie que toutes les coordonnées des curseurs (x, y) sont comprises entre 0 et 9.
@@ -107,6 +128,7 @@ def validate_entity_initialization(ast, declared_entities):
             declared_entities["variables"][variable] = evaluate_expression(expression, declared_entities["variables"])
             print(f"Variable '{variable}' assigned value: {declared_entities['variables'][variable]}")
 
+
 def validate_program(ast):
     """
     Applique toutes les validations nécessaires à un programme représenté par un AST.
@@ -121,3 +143,9 @@ def validate_program(ast):
 
     # Valider que toutes les entités sont correctement initialisées
     validate_entity_initialization(ast, declared_entities)
+    
+    # Valider couleur épaisseur
+
+    validate_cursor_properties(ast)
+
+    
