@@ -131,21 +131,47 @@ def on_key_release(event=None): #permet de mettre a jour les n de ligne et appli
 
 def run():
     code = editor.get("1.0", END)
+    editor.tag_remove("ERROR", "1.0", END)  # Nettoyer les erreurs précédentes
     try:
         tokens = tokenize(code)
         parser = Parser(tokens)
 
         parsed_output = parser.parse_program()
         validate_program(parsed_output)
+
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Parsed Output:\n{parsed_output}")
     except SyntaxError as e:
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Syntax Error: {str(e)}")
+        
+        error_message = str(e)
+        line, column = extract_line_column_from_error(error_message)
+        
+        # Définir les indices de début et de fin pour la balise d'erreur
+        start_index = f"{line}.{column}"
+        
+        # Trouver la fin du mot en utilisant les espaces ou les délimiteurs
+        end_index = f"{line}.{column}"
+        while editor.get(end_index) not in (' ', '\n', '\t', '', '(', ')', '{', '}', '[', ']', ';', ':', ','):
+            end_index = f"{line}.{int(end_index.split('.')[1]) + 1}"
+        
+        # Ajouter la balise d'erreur
+        editor.tag_add("ERROR", start_index, end_index)
+        editor.tag_config("ERROR", underline=True, foreground="red")
     except Exception as e:
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Error: {str(e)}")
 
+def extract_line_column_from_error(error_message):
+    # Extraire les informations de ligne et de colonne du message d'erreur
+    import re
+    match = re.search(r"line (\d+), column (\d+)", error_message)
+    if match:
+        line = int(match.group(1))
+        column = int(match.group(2))
+        return line, column
+    return 1, 0  # Valeurs par défaut si l'extraction échoue
 
 
 # Creation des menus
@@ -184,6 +210,7 @@ editor.tag_configure("HEX_COLOR", foreground="green")  # Couleurs hexadécimales
 editor.tag_configure("OPERATOR", foreground="purple")  # Opérateurs
 editor.tag_configure("ARITHMETIC_OP", foreground="darkred")  # Opérateurs arithmétiques
 editor.tag_configure("DELIMITER", foreground="grey")  # Délimiteurs
+editor.tag_configure("ERROR", underline=True, foreground="red")
 
 
 output_display = Text(compiler, height=10, bg="lightgrey", fg="black")
