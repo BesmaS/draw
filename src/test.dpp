@@ -3,3 +3,12 @@ move(cursor1, 50);
 rotate(cursor1, 90);
 drawLine(cursor1, 30, 40);
 setColor(cursor1, #FF5733);
+createCursor(cursor1,2	,2);
+move(cursor1,50);
+a=2;
+if(a==23){
+	createCursor(cursor2,4,5);}
+else{
+	createCursor(cursor3,1,2);};
+
+
