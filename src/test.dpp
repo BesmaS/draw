@@ -5,6 +5,7 @@ drawLine(cursor1, 30, 40);
 setColor(cursor1, #FF5733);
 createCursor(cursor1,2	,2);
 move(cursor1,50);
+
 a=2;
 if(a==23){
 	createCursor(cursor2,4,5);}
