@@ -1,9 +1,9 @@
-createCursor(cursor1, 10, 20);
-move(cursor1, 50);
-rotate(cursor1, 90);
-drawLine(cursor1, 30, 40);
-setColor(cursor1, #FF5733);
-createCursor(cursor1,2	,2);
+createCursor(cursor1,10,20);
+move(cursor1,50);
+rotate(cursor1,90);
+drawLine(cursor1,30,40);
+setColor(cursor1,#FF5733);
+createCursor(cursor1,2,2);
 move(cursor1,50);
 
 a=2;
