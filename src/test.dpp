@@ -13,3 +13,27 @@ else{
 	createCursor(cursor3,1,2);};
 
 
+createCursor(cursor1,1,2);
+move(cursor1,50);
+
+setColor(cursor1,#FF5733);
+setThickness(cursor1,2);
+createCursor(cursor1,2,2);
+move(cursor1,50);
+a=2;
+if(a==23){
+	createCursor(cursor2,4,5);}
+else{
+	createCursor(cursor3,1,2);};
+
+a=5+3*2+(8/4);
+
+x=5;
+y=3;
+if(x!=y){
+	createCursor(cursor8,1,2);}
+else{
+	z=0;
+};
+
+
