@@ -153,6 +153,34 @@ class Parser:
         else:
             raise SyntaxError(f"Invalid cursor instruction '{token.value}'.")
         return node
+    def parse_drawing_instruction(self):
+        """Analyse une instruction de dessin et crée un nœud AST pour la forme à dessiner."""
+        print("Parsing <drawing_instruction>...")
+        token = self.consume('KEYWORD')
+        node = ASTNode(token.value)  # Crée un nœud pour l'instruction de dessin
+
+        if token.value == "drawCircle":
+            self.consume('DELIMITER')  # Consomme '('
+            cursor_id = self.consume('IDENTIFIER').value
+            self.check_entity_declaration("cursor", cursor_id, token.value)
+            node.add_child(ASTNode("cursor", cursor_id))  # Ajoute le curseur comme sous-nœud
+            self.consume('DELIMITER')  # Consomme ','
+
+            # Le rayon vient en deuxième position
+            radius = int(self.consume('NUMBER').value)  # Rayon du cercle
+            node.add_child(ASTNode("radius", radius))  # Ajoute le rayon
+
+            self.consume('DELIMITER')  # Consomme ','
+
+            coordinates = self.parse_coordinates()
+            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
+            self.consume('DELIMITER')  # Consume ')'
+
+        else:
+            raise SyntaxError(f"Invalid drawing instruction '{token.value}'.")
+
+        return node
+
 
     def parse_coordinates(self):
         """Analyse les coordonnées et crée un nœud AST."""
