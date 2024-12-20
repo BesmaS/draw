@@ -36,7 +36,21 @@ def evaluate_expression(node, declared_variables):
         if node.value not in declared_variables or declared_variables[node.value] is None:
             raise SyntaxError(f"Variable '{node.value}' used before initialization.")
         return declared_variables[node.value]
+    elif node.node_type == "increment":  # Gestion de l'incrémentation
+        variable_name = node.value
 
+        if variable_name not in declared_variables or declared_variables[variable_name] is None:
+            raise SyntaxError(f"Variable '{variable_name}' used before initialization.")
+
+        if node.children[0].node_type == "postfix":
+            # Post-fixé (i++): retourne l'ancienne valeur, puis incrémente
+            old_value = declared_variables[variable_name]
+            declared_variables[variable_name] += 1
+            return old_value
+        elif node.children[0].node_type == "prefix":
+            # Pré-fixé (++i): incrémente, puis retourne la nouvelle valeur
+            declared_variables[variable_name] += 1
+            return declared_variables[variable_name]
     elif node.node_type == "operation":
         left = evaluate_expression(node.children[0], declared_variables)
         right = evaluate_expression(node.children[1], declared_variables)
