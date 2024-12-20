@@ -38,3 +38,4 @@ else{
 
 while(x<7){
 	createCursor(cursor22,3,4);};
+drawRectangle(c3,3,3,2,1);
