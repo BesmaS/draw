@@ -1,4 +1,4 @@
-createCursor(cursor1,10,20);
+createCursor(cursor1,1,2);
 move(cursor1,50);
 rotate(cursor1,90);
 
@@ -38,4 +38,4 @@ else{
 
 while(x<7){
 	createCursor(cursor22,3,4);};
-drawRectangle(c3,3,3,2,1);
+drawRectangle(cursor1,3,3,2,1);
