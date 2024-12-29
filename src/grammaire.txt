@@ -15,6 +15,7 @@
                        | "drawCircle" "(" <coordonnees> "," <rayon> ")"
                        | "drawRectangle" "(" <coordonnees> "," <largeur> "," <hauteur> ")"
                        | "drawArc" "(" <coordonnees> "," <rayon> "," <angle> ")"
+                       | "drawSquare" "(" <coordonnees> "," <coté> ")" 
                        
 <color_instruction> ::= "setColor" "(" <identifiant> "," <couleur> ")"
 <thickness_instruction> ::= "setThickness" "(" <identifiant> "," <épaisseur> ")"
