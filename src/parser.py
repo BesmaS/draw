@@ -96,7 +96,7 @@ class Parser:
         # Autres instructions existantes
         elif token.value in {"createCursor", "move", "rotate", "setColor", "setThickness"}:
             return self.parse_cursor_instruction()
-        elif token.value in {"drawLine", "drawCircle", "drawRectangle", "drawArc"}:
+        elif token.value in {"drawLine", "drawCircle", "drawSquare", "drawRectangle", "drawArc"}:
             return self.parse_drawing_instruction()
         elif token.value == "while":
             return self.parse_while_loop()
@@ -181,6 +181,25 @@ class Parser:
             node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
             self.consume('DELIMITER')  # Consume ')'
 
+        elif token.value == "drawLine":
+            self.consume('DELIMITER')  # Consomme '('
+            cursor_id = self.consume('IDENTIFIER').value
+            self.check_entity_declaration("cursor", cursor_id, token.value)
+            node.add_child(ASTNode("cursor", cursor_id))  # Ajoute le curseur comme sous-nœud
+            self.consume('DELIMITER')  # Consomme ','
+
+            # Première coordonnée (x1, y1)
+            coordinates = self.parse_coordinates()
+            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
+
+            self.consume('DELIMITER')  # Consomme ','
+
+            # Deuxième coordonnée (x2, y2)
+            coordinates = self.parse_coordinates()
+            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
+
+            self.consume('DELIMITER')  # Consomme ')'
+
         elif token.value == "drawSquare":
             self.consume('DELIMITER')  # Consomme '('
             cursor_id = self.consume('IDENTIFIER').value
@@ -206,12 +225,6 @@ class Parser:
             node.add_child(ASTNode("cursor", cursor_id))  # Ajoute le curseur comme sous-nœud
             self.consume('DELIMITER')  # Consomme ','
 
-            # Centre de l'arc
-            center_coordinates = self.parse_coordinates()
-            node.add_child(ASTNode("coordinates_center", None, center_coordinates.children))  # Coordonnées du centre
-
-            self.consume('DELIMITER')  # Consomme ','
-
             # Rayon
             radius = int(self.consume('NUMBER').value)
             node.add_child(ASTNode("radius", radius))  # Ajoute le rayon
@@ -227,7 +240,15 @@ class Parser:
             # Angle de fin
             end_angle = int(self.consume('NUMBER').value)
             node.add_child(ASTNode("end_angle", end_angle))  # Ajoute l'angle de fin
+            self.consume('DELIMITER')  # Consomme ','
+            
+            # Centre de l'arc
+             # Coordonnées
+            coordinates = self.parse_coordinates()
+            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
             self.consume('DELIMITER')  # Consomme ')'
+             
+             
         elif token.value == "drawRectangle":
             self.consume('DELIMITER')  # Consomme '('
             cursor_id = self.consume('IDENTIFIER').value
@@ -251,6 +272,8 @@ class Parser:
             coordinates = self.parse_coordinates()
             node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
             self.consume('DELIMITER')  # Consomme ')'
+            
+               
 
         else:
             raise SyntaxError(f"Invalid drawing instruction '{token.value}'.")
