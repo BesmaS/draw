@@ -38,4 +38,8 @@ else{
 
 while(x<7){
 	createCursor(cursor22,3,4);};
-drawRectangle(cursor1,3,3,2,1);
+createCursor(cursor228,2,4);
+drawCircle(cursor1,120,3,2);
+drawLine(cursor1,3,4,2,2);
+drawArc(cursor1,3,120,80,2,2);
+drawRectangle(cursor1,21,12,2,3);
