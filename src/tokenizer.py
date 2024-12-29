@@ -2,7 +2,7 @@ import re
 
 # Token definition
 TOKEN_SPECS = [
-    ('KEYWORD', r'\b(createCursor|move|rotate|drawLine|drawCircle|drawRectangle|drawArc|setColor|setThickness|if|else|for|while)\b'),  # keywords
+    ('KEYWORD', r'\b(createCursor|move|rotate|drawLine|drawCircle|drawRectangle|drawArc|drawSquare|setColor|setThickness|if|else|for|while)\b'),  # keywords
     ('IDENTIFIER', r'[a-zA-Z_]\w*'),        # Identifiers
     ('NUMBER', r'\b\d+(\.\d+)?\b'),         # Numbers
     ('HEX_COLOR', r'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'),  # Hex colors
