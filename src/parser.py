@@ -11,6 +11,16 @@ class ASTNode:
         self.node_type = node_type
         self.value = value
         self.children = []  # Sous-nœuds de l'AST
+    def to_dict(self):
+        """
+        Convertit un ASTNode en un dictionnaire récursif compatible avec JSON.
+        """
+        return {
+            "type": self.node_type,
+            "value": self.value,
+            "children": [child.to_dict() for child in self.children]
+        }
+
 
     def add_child(self, child):
         """Ajoute un sous-nœud à ce nœud."""

@@ -6,6 +6,9 @@ from ttkbootstrap.constants import *# type: ignore #nv
 from tokenizer import tokenize # type: ignore
 from parser import Parser # type: ignore
 from semantic_analyzer import validate_program  # Importer la fonction validate_program pour effectuer la validation sémantique
+import json
+from parser  import ASTNode
+
 
 
 
@@ -128,6 +131,18 @@ def on_key_release(event=None): #permet de mettre a jour les n de ligne et appli
     
     update_line_number()  # Mettre à jour les numéros de ligne
     update_syntax_highlighting()  # Appliquer la coloration syntaxique
+def save_ast_to_json(parsed_output, filename="ast_output.json"):
+    try:
+        # Convertir l'AST en dictionnaire compatible JSON
+        if isinstance(parsed_output, ASTNode):
+            parsed_output = parsed_output.to_dict()
+
+        # Enregistrer l'AST dans un fichier JSON
+        with open(filename, 'w') as json_file:
+            json.dump(parsed_output, json_file, indent=4)
+        print(f"L'AST a été enregistré dans {filename}")
+    except Exception as e:
+        print(f"Erreur lors de l'enregistrement de l'AST : {str(e)}")
 
 def run():
     code = editor.get("1.0", END)
@@ -141,6 +156,7 @@ def run():
 
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Parsed Output:\n{parsed_output}")
+        save_ast_to_json(parsed_output)
     except SyntaxError as e:
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Syntax Error: {str(e)}")
