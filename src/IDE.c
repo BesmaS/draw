@@ -3,6 +3,12 @@
 #include <string.h>
 #include <math.h>
 
+typedef struct {
+    x,
+    y
+} Cursor;
+
+
 typedef enum {
     SHAPE_LINE,
     SHAPE_RECTANGLE,
@@ -61,3 +67,32 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, int x, int y, in
             break;
     }
 }
+
+// Utilisation des séquences d'echappement ANSI pour gérer le curseur
+
+void moveCursor(Cursor* cursor, int x, int y) {
+    cursor->x = x;
+    cursor->y = y;
+    printf("\033[%d;%dH", cursor->y, cursor->x); // Les coordonnées sont 1-indexées, 1,1 est le coin supérieur gauche, le H à la fin signifie de deplacer le curseur a une position donnée
+}
+void setCursorColor(const char* color) {
+    printf("\033[%sm", color);   // 30 : Noir 31 : Rouge 32 : Vert 33 : Jaune 34 : Bleu 35 : Magenta 36 : Cyan 37 : Blanc, le m actives les attributs graphique (couleur, effets etc...)
+}
+
+
+void resetAttributes() {
+    printf("\033[0m"); // Reset la couleur et le style du curseur, 0m reset tout les attributs graphiques
+}
+
+void clearScreen() {
+printf("\033[2J\033[H");  // 2J: Nettoie l'écran, H: Remet le curseur au coin supérieur gauche
+}
+
+void hideCursor() {
+    printf("\033[?25l");    // 25l: Desactive l'affichage du curseur 
+}
+
+void showCursor() {
+    printf("\033[?25h");    // 25h: Active l'affichage du curseur
+}
+
