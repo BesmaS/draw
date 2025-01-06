@@ -79,6 +79,12 @@ void setCursorColor(const char* color) {
     printf("\033[%sm", color);   // 30 : Noir 31 : Rouge 32 : Vert 33 : Jaune 34 : Bleu 35 : Magenta 36 : Cyan 37 : Blanc, le m actives les attributs graphique (couleur, effets etc...)
 }
 
+Cursor createCursor(int x, int y) {
+    Cursor cursor;
+    cursor.x = x;
+    cursor.y = y;
+    return cursor;
+}
 
 void resetAttributes() {
     printf("\033[0m"); // Reset la couleur et le style du curseur, 0m reset tout les attributs graphiques
@@ -96,3 +102,24 @@ void showCursor() {
     printf("\033[?25h");    // 25h: Active l'affichage du curseur
 }
 
+int main() {
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window* window = SDL_CreateWindow("IDE", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);    // Affiche le rendur sur l'ecran
+
+    Cursor cursor = createCursor(0, 0);
+    moveCursor(&cursor, 10, 10);    // Deplace le curseur vers la position 10, 10
+    setCursorColor("31");           // Change la couleur du curseur en rouge
+    draw_shape(renderer, "ligne", 10, 10, 20, 20, 0, 0, 0, 0);    // Dessine une ligne verticale
+    draw_shape(renderer, "rectangle", 30, 30, 50, 50, 0, 0, 0, 0); // Dessine un rectangle  
+    draw_shape(renderer, "oval", 60, 60, 80, 80, 0, 0, 0, 0);       // Dessine un cercle
+    draw_shape(renderer, "point", 90, 90, 100, 100, 0, 0, 0, 0);    // Dessine un point
+    resetAttributes();
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 0;
+}
