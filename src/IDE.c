@@ -117,6 +117,10 @@ int main() {
     draw_shape(renderer, "rectangle", 30, 30, 50, 50, 0, 0, 0, 0); // Dessine un rectangle  
     draw_shape(renderer, "oval", 60, 60, 80, 80, 0, 0, 0, 0);       // Dessine un cercle
     draw_shape(renderer, "point", 90, 90, 100, 100, 0, 0, 0, 0);    // Dessine un point
+    
+    SDL_RenderPresent(renderer);
+    SDL_Delay(5000);
+    
     resetAttributes();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
