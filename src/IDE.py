@@ -8,7 +8,7 @@ from parser import Parser # type: ignore
 from semantic_analyzer import validate_program  # Importer la fonction validate_program pour effectuer la validation sémantique
 import json
 from parser  import ASTNode
-
+from generate_c import generate_c_code
 
 
 
@@ -156,7 +156,8 @@ def run():
 
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Parsed Output:\n{parsed_output}")
-        save_ast_to_json(parsed_output)
+        generate_c_code(parsed_output.to_dict())
+        #save_ast_to_json(parsed_output)
     except SyntaxError as e:
         output_display.delete('1.0', END)
         output_display.insert('1.0', f"Syntax Error: {str(e)}")
