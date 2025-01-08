@@ -1,8 +1,6 @@
 import subprocess
-from pathlib import Path
-import json
 
-# Programme C initial 
+# Étape 1 : Programme C stocké dans une liste
 c_header = [
     "#include <SDL2/SDL.h>",
     "#include <stdio.h>",
@@ -87,15 +85,18 @@ c_draw_shape_func = [
     "    printf(\"\\033[%sm\", color);   // 30 : Noir 31 : Rouge 32 : Vert 33 : Jaune 34 : Bleu 35 : Magenta 36 : Cyan 37 : Blanc, le m actives les attributs graphique (couleur, effets etc...)",
     "}",
     "",
-    "Cursor createCursor(Cursor existingCursor, int x, int y) {",
+     "Cursor createCursor(Cursor* existingCursor, int x, int y) {",
     "    if (existingCursor != NULL) {",
-    "        free(existingCursor);  // Libère la mémoire si le curseur existe déjà",
+    "        existingCursor->x = x;",
+    "        existingCursor->y = y;",
+    "        return *existingCursor;  // Retourne le curseur modifié",
+    "    } else {",
+    "        Cursor newCursor;",
+    "        newCursor.x = x;",
+    "        newCursor.y = y;",
+    "        return newCursor;  // Retourne un nouveau curseur",
     "    }",
-    "    Cursor cursor = (Cursor)malloc(sizeof(Cursor));  // Alloue de la mémoire pour un nouveau curseur",
-    "    cursor.x = x;",
-    "    cursor.y = y;",
-    "    return cursor;",
-    "}",
+    "}"
     "",
     "void resetAttributes() {",
     "    printf(\"\\033[0m\"); // Reset la couleur et le style du curseur, 0m reset tout les attributs graphiques",
@@ -140,10 +141,6 @@ c_main_begin = [
     "    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);",
     "    SDL_RenderClear(renderer);",
 ]
-#Partie du code ajouté en fonction du parsed output
-c_main_content = [
-    
-]
 
 c_main_end = [
     "    SDL_RenderPresent(renderer);",
@@ -158,8 +155,9 @@ c_main_end = [
     "}"
 ]
 
-
-# Écriture dans le fichier C
+from pathlib import Path
+import json
+# Étape 2 : Écrire le fichier C
 def generate_c_code(parsed_output, depth=0):
     """
     Génère du code C basé sur une structure AST.
@@ -168,12 +166,14 @@ def generate_c_code(parsed_output, depth=0):
     :param parsed_output: Dictionnaire représentant l'AST.
     :param depth: Profondeur actuelle pour l'indentation (utilisé pour déboguer).
     """
+    print('parsed_output in generate c', parsed_output)
     indent = " " * depth
     print(f"{indent}Parsed output received in generate_c_code.")
     
     if isinstance(parsed_output, dict):
         print(f"{indent}Processing root node.")
-        
+        c_main_content = []
+        created_cursors = set() # Stocker les curseurs créés
         # Parcourir les enfants de la racine
         children = parsed_output.get("children", [])
         for node in children:
@@ -197,8 +197,15 @@ def generate_c_code(parsed_output, depth=0):
                 
                 # Afficher les coordonnées validées
                 print(f"{indent}Cursor id={cursorId_value} coordinates: x={x_value}, y={y_value}.")
-                c_main_content.append(f"Cursor {cursorId_value} = createCursor({x_value},{y_value});")
-                # TODO: Générer le code C pour cette instruction
+                # Vérifiez si le curseur existe déjà
+                if cursorId_value in created_cursors:
+                    print(f"{indent}Cursor '{cursorId_value}' already exists. Updating its values.")
+                    c_main_content.append(f"moveCursor(&{cursorId_value}, {x_value}, {y_value});")
+                else:
+                    print(f"{indent}Creating new cursor '{cursorId_value}'.")
+                    created_cursors.add(cursorId_value)
+                    c_main_content.append(f"Cursor {cursorId_value} = {{ {x_value}, {y_value} }};")
+                    
             elif node_type == "move":
                 print(f"{indent}Found 'move' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
@@ -530,4 +537,4 @@ parsed_output = {
 
 
 
-generate_c_code(parsed_output)
+#generate_c_code(parsed_output)
