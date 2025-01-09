@@ -12,22 +12,22 @@ class ASTNode:
         self.value = value
         self.children = []  # Sous-nœuds de l'AST
     def to_dict(self):
-        """
-        Convertit un ASTNode en un dictionnaire récursif compatible avec JSON.
-        """
+        
+ #Convertit un ASTNode en un dictionnaire récursif compatible avec JSON.
+        
         return {
             "type": self.node_type,
             "value": self.value,
             "children": [child.to_dict() for child in self.children]
         }
 
-
+#Ajoute un sous-noeud 
     def add_child(self, child):
-        """Ajoute un sous-nœud à ce nœud."""
+        
         self.children.append(child)
-
+#repr pour debug
     def __repr__(self):
-        """Représentation en texte pour déboguer."""
+        
         return f"ASTNode(type={self.node_type}, value={self.value}, children={self.children})"
 
 
@@ -39,24 +39,22 @@ class Parser:
         self.declared_entities = {
             "cursor": set()  # Par exemple, les curseurs
         }
-
+#Retourne le token courant ou 'EOF' si fin atteinte.
     def current_token(self):
-        """Retourne le token courant ou 'EOF' si fin atteinte."""
+    
         if self.pos < len(self.tokens):
             return self.tokens[self.pos]
         return Token('EOF', 'EOF', -1, -1)  # Token spécial pour la fin
-
+#Retourne le prochain token sans le consommer.
     def peek(self):
-        """Retourne le prochain token sans le consommer."""
+      
         if self.pos + 1 < len(self.tokens):
             return self.tokens[self.pos + 1]
         return Token('EOF', 'EOF', -1, -1)
-
+#Conssomme le token actuel s'il correspond au type attendu sinon lève une erreur de syntaxe
     def consume(self, expected_type):
-        """
-        Consomme le token actuel s'il correspond au type attendu,
-        sinon lève une erreur de syntaxe.
-        """
+        
+        
         token = self.current_token()
         if token.type == expected_type:
             self.pos += 1
@@ -66,22 +64,17 @@ class Parser:
                 f"Expected token type '{expected_type}' but got '{token.type}' "
                 f"at line {token.line}, column {token.column}."
             )
-
+#Vérification entité
     def check_entity_declaration(self, entity_type, entity_name, usage_context):
-        """
-        Vérifie si une entité a été déclarée.
-        :param entity_type: Type de l'entité (par exemple, "cursor").
-        :param entity_name: Nom de l'entité (par exemple, "cursor1").
-        :param usage_context: Contexte où l'entité est utilisée (par exemple, "move").
-        """
+        
         if entity_name not in self.declared_entities.get(entity_type, set()):
             raise SyntaxError(
                 f"{entity_type.capitalize()} '{entity_name}' used in '{usage_context}' "
                 "has not been initialized."
             )
-
+#Analyse du programme complet + retourne AST
     def parse_program(self):
-        """Analyse un programme complet et retourne un AST."""
+        
         print("Parsing <program>...")
         program_node = ASTNode("program")
         while self.current_token().type != 'EOF' and not (
@@ -91,15 +84,18 @@ class Parser:
             program_node.add_child(instruction_node)
         return program_node
 
+
+#Analyse instruction du programme et délègue son traitement au module de parsing approprié
+
     def parse_instruction(self):
-        """Analyse une instruction et crée un nœud dans l'AST."""
+        
         print("Parsing <instruction>...")
         token = self.current_token()
 
-        # Vérifie si c'est une instruction d'affectation (ex: a = 7)
+        # Vérifie si c'est une instruction d'affectation (ex: a = 7) 
         if token.type == 'IDENTIFIER' and self.peek().type == 'ASSIGN':
             return self.parse_assignment()
-        # Ajout de l'instruction conditionnelle "if"
+        # Ajout de l'instruction conditionnelle "if" 
         elif token.value == "if":
             return self.parse_condition_instruction()
 
@@ -118,7 +114,7 @@ class Parser:
         
         else:
             raise SyntaxError(f"Unexpected instruction '{token.value}' at line {token.line}, column {token.column}.")
-
+#analyse des instruction de curseur
     def parse_cursor_instruction(self):
         """Analyse une instruction de curseur et crée un nœud AST."""
         print("Parsing <cursor_instruction>...")
@@ -168,8 +164,9 @@ class Parser:
         else:
             raise SyntaxError(f"Invalid cursor instruction '{token.value}'.")
         return node
+#Analyse instruction de dessin
     def parse_drawing_instruction(self):
-        """Analyse une instruction de dessin et crée un nœud AST pour la forme à dessiner."""
+        
         print("Parsing <drawing_instruction>...")
         token = self.consume('KEYWORD')
         node = ASTNode(token.value)  # Crée un nœud pour l'instruction de dessin
@@ -181,9 +178,9 @@ class Parser:
             node.add_child(ASTNode("cursor", cursor_id))  # Ajoute le curseur comme sous-nœud
             self.consume('DELIMITER')  # Consomme ','
 
-            # Le rayon vient en deuxième position
-            radius = int(self.consume('NUMBER').value)  # Rayon du cercle
-            node.add_child(ASTNode("radius", radius))  # Ajoute le rayon
+            # Rayon du cercle
+            radius = int(self.consume('NUMBER').value)  
+            node.add_child(ASTNode("radius", radius))  
 
             self.consume('DELIMITER')  # Consomme ','
 
@@ -200,14 +197,12 @@ class Parser:
 
             # Première coordonnée (x1, y1)
             coordinates = self.parse_coordinates()
-            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
-
+            node.add_child(coordinates) 
             self.consume('DELIMITER')  # Consomme ','
 
             # Deuxième coordonnée (x2, y2)
             coordinates = self.parse_coordinates()
-            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
-
+            node.add_child(coordinates)  
             self.consume('DELIMITER')  # Consomme ')'
 
         elif token.value == "drawSquare":
@@ -219,13 +214,13 @@ class Parser:
 
             # Taille du côté
             side_length = int(self.consume('NUMBER').value)
-            node.add_child(ASTNode("side_length", side_length))  # Ajoute la taille du côté
+            node.add_child(ASTNode("side_length", side_length)) 
 
             self.consume('DELIMITER')  # Consomme ','
 
             # Coordonnées
             coordinates = self.parse_coordinates()
-            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
+            node.add_child(coordinates)  
             self.consume('DELIMITER')  # Consomme ')'
     
         elif token.value == "drawArc":
@@ -237,25 +232,25 @@ class Parser:
 
             # Rayon
             radius = int(self.consume('NUMBER').value)
-            node.add_child(ASTNode("radius", radius))  # Ajoute le rayon
+            node.add_child(ASTNode("radius", radius))  
 
             self.consume('DELIMITER')  # Consomme ','
 
             # Angle de départ
             start_angle = int(self.consume('NUMBER').value)
-            node.add_child(ASTNode("start_angle", start_angle))  # Ajoute l'angle de départ
+            node.add_child(ASTNode("start_angle", start_angle))  
 
             self.consume('DELIMITER')  # Consomme ','
 
             # Angle de fin
             end_angle = int(self.consume('NUMBER').value)
-            node.add_child(ASTNode("end_angle", end_angle))  # Ajoute l'angle de fin
+            node.add_child(ASTNode("end_angle", end_angle))  
             self.consume('DELIMITER')  # Consomme ','
             
             # Centre de l'arc
              # Coordonnées
             coordinates = self.parse_coordinates()
-            node.add_child(coordinates)  # Ajoute les coordonnées comme sous-nœud
+            node.add_child(coordinates) 
             self.consume('DELIMITER')  # Consomme ')'
              
              
@@ -268,13 +263,13 @@ class Parser:
 
             # Largeur
             width = int(self.consume('NUMBER').value)
-            node.add_child(ASTNode("width", width))  # Ajoute la largeur
+            node.add_child(ASTNode("width", width))  
 
             self.consume('DELIMITER')  # Consomme ','
 
             # Hauteur
             height = int(self.consume('NUMBER').value)
-            node.add_child(ASTNode("height", height))  # Ajoute la hauteur
+            node.add_child(ASTNode("height", height))  
 
             self.consume('DELIMITER')  # Consomme ','
 
@@ -290,9 +285,9 @@ class Parser:
 
         return node
 
-
+#Analyse les coordonnées 
     def parse_coordinates(self):
-        """Analyse les coordonnées et crée un nœud AST."""
+       
         print("Parsing <coordinates>...")
         coord_node = ASTNode("coordinates")
         x_value = int(self.consume('NUMBER').value)
@@ -301,8 +296,9 @@ class Parser:
         y_value = int(self.consume('NUMBER').value)
         coord_node.add_child(ASTNode("y", y_value))
         return coord_node
+        #Analyse une boucle while
     def parse_while_loop(self):
-        """Analyse une boucle while."""
+        
         print("Parsing <while_loop>...")
         self.consume('KEYWORD')  # Consomme 'while'
         self.consume('DELIMITER')  # Consomme '('
@@ -318,9 +314,9 @@ class Parser:
         loop_node.add_child(program_node)
 
         return loop_node
-
+#Analyse une boucle for (faut qur je revienne dessus pb incrementation bouhhh
     def parse_for_loop(self):
-        """Analyse une boucle for."""
+      
         print("Parsing <for_loop>...")
         self.consume('KEYWORD')  # Consomme 'for'
         self.consume('DELIMITER')  # Consomme '('
@@ -335,7 +331,7 @@ class Parser:
 
         self.consume('DELIMITER')  # Consomme ';'
         
-        # Partie incrémentation (expression)
+        # Partie incrémentation (expression) c'est ici je penses
         increment_node = self.parse_expression()
 
         self.consume('DELIMITER')  # Consomme ')'
@@ -353,9 +349,9 @@ class Parser:
         loop_node.add_child(program_node)
 
         return loop_node
-
+#Analyse une boucle do while
     def parse_do_while_loop(self):
-        """Analyse une boucle do while."""
+     
         print("Parsing <do_while_loop>...")
         self.consume('KEYWORD')  # Consomme 'do'
         self.consume('DELIMITER')  # Consomme '{'
@@ -378,26 +374,27 @@ class Parser:
         loop_node.add_child(condition_node)
 
         return loop_node
+    #Analyse instruction conditionelle
     def parse_condition_instruction(self):
-        """Analyse une instruction conditionnelle 'if'."""
+        
         print("Parsing <if_instruction>...")
         self.consume('KEYWORD')  # Consomme 'if'
-        self.consume('DELIMITER')  # Consomme '('
+        self.consume('DELIMITER')  
         condition_node = self.parse_expression()  # Analyse l'expression conditionnelle
-        self.consume('DELIMITER')  # Consomme ')'
-        self.consume('DELIMITER')  # Consomme '{'
+        self.consume('DELIMITER')  
+        self.consume('DELIMITER')  
         program_node = self.parse_program()  # Analyse le programme dans le bloc 'if'
 
-        # Ici, on consomme uniquement la '}' qui marque la fin du bloc if
-        self.consume('DELIMITER')  # Consomme '}'
+        
+        self.consume('DELIMITER') 
 
         # Vérification de la présence d'un bloc 'else' optionnel
         else_node = None
         if self.current_token().value == "else":
             self.consume('KEYWORD')  # Consomme 'else'
-            self.consume('DELIMITER')  # Consomme '{'
+            self.consume('DELIMITER')  
             else_program_node = self.parse_program()  # Programme dans le bloc 'else'
-            self.consume('DELIMITER')  # Consomme '}'
+            self.consume('DELIMITER')  
             else_node = ASTNode("else", None)
             else_node.add_child(else_program_node)
 
@@ -413,9 +410,9 @@ class Parser:
             node.add_child(program_node)
 
         return node
-
+#Analyse affectation de variable
     def parse_assignment(self):
-        """Analyse une instruction d'affectation de variable."""
+      
         identifiant = self.consume('IDENTIFIER').value
         self.consume('ASSIGN')  # Consomme '='
         assignment_node = ASTNode("assignment", identifiant)
@@ -424,23 +421,25 @@ class Parser:
         expression_node = self.parse_expression()
         assignment_node.add_child(expression_node)
         return assignment_node
-
+#Analyse une expression qui peut inclure des comparateurs et des opérateurs arithmétiques
     def parse_expression(self):
-        """
-        Analyse une expression qui peut inclure des comparateurs et des opérateurs arithmétiques.
-        """
+        
         # Analyse un premier terme
         left = self.parse_term()
 
         # Gestion des comparateurs (==, !=, <, >, <=, >=)
-        while self.current_token().type == 'OPERATOR':  # Vérifie si c'est un opérateur de comparaison
-            operator = self.consume('OPERATOR').value  # Consomme l'opérateur
-            right = self.parse_term()  # Analyse le terme à droite
+        # Vérifie si c'est un opérateur de comparaison
+        while self.current_token().type == 'OPERATOR':
+        # Consomme l'opérateur      
+            operator = self.consume('OPERATOR').value 
+         # Analyse le terme à droite 
+            right = self.parse_term() 
             comparison_node = ASTNode("comparison", operator)
             comparison_node.add_child(left)
             comparison_node.add_child(right)
-            left = comparison_node  # Le résultat devient le nouveau "left"
+           # Le résultat devient le nouveau "left"
 
+            left = comparison_node  
         # Gestion des opérateurs arithmétiques (+, -)
         while self.current_token().type == 'ARITHMETIC_OP' and self.current_token().value in {"+", "-"}:
             operator = self.consume('ARITHMETIC_OP').value  # Consomme '+' ou '-'
@@ -448,18 +447,16 @@ class Parser:
             operation_node = ASTNode("operation", operator)
             operation_node.add_child(left)
             operation_node.add_child(right)
-            left = operation_node  # Le résultat devient le nouveau "left"
-
+            left = operation_node  
         return left
-
+#Analyse un terme, qui peut inclure des multiplications/divisions ou des parenthèses.
     def parse_term(self):
-        """
-        Analyse un terme, qui peut inclure des multiplications/divisions ou des parenthèses.
-        """
-        left = self.parse_factor()  # Analyse un facteur
+# Analyse un facteur
+        left = self.parse_factor()  
 
         while self.current_token().type == 'ARITHMETIC_OP' and self.current_token().value in {"*", "/"}:
-            operator = self.consume('ARITHMETIC_OP').value  # Consomme '*' ou '/'
+            # Consomme '*' ou '/'
+            operator = self.consume('ARITHMETIC_OP').value 
             right = self.parse_factor()
             operation_node = ASTNode("operation", operator)
             operation_node.add_child(left)
@@ -467,26 +464,26 @@ class Parser:
             left = operation_node
 
         return left
+#Analyse un facteur, qui peut être un nombre, une variable ou une expression entre parenthèses.
 
     def parse_factor(self):
-        """
-        Analyse un facteur, qui peut être un nombre, une variable ou une expression entre parenthèses.
-        """
+        
         token = self.current_token()
-
-        if token.type == 'NUMBER':  # Si c'est un nombre
+# Si c'est un nombre
+        if token.type == 'NUMBER':  
             value = int(self.consume('NUMBER').value)
             return ASTNode("number", value)
 
         elif token.type == 'IDENTIFIER':  # Si c'est une variable
             value = self.consume('IDENTIFIER').value
             return ASTNode("variable", value)
-
-        elif token.type == 'DELIMITER' and token.value == "(":  # Si c'est une parenthèse ouvrante
-            self.consume('DELIMITER')  # Consomme '('
-            expression = self.parse_expression()  # Analyse récursive
+        # Si c'est une parenthèse ouvrante
+        elif token.type == 'DELIMITER' and token.value == "(":  
+            self.consume('DELIMITER')  
+            # Analyse récursive
+            expression = self.parse_expression()  
             if self.current_token().type == 'DELIMITER' and self.current_token().value == ")":
-                self.consume('DELIMITER')  # Consomme ')'
+                self.consume('DELIMITER')  
                 return expression
             else:
                 raise SyntaxError("Missing closing parenthesis.")
