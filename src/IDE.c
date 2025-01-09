@@ -66,43 +66,34 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, i
     }
 }
 
-// Utilisation des s�quences d'echappement ANSI pour g�rer le curseur
+
+void drawCircle(SDL_Renderer *renderer, int x0, int y0, int radius) {
+    for (double angle = 0; angle < 2 * M_PI; angle += 0.001) {   // on parcourt l'angle en radian
+        int x = x0 + (int)(radius * cos(angle));
+        int y = y0 + (int)(radius * sin(angle));
+        SDL_RenderDrawPoint(renderer, x, y);
+    }
+}
+
+// Utilisation des séquences d'echappement ANSI pour g�rer le curseur
 
 void moveCursor(Cursor* cursor, int x, int y) {
     cursor->x = x;
     cursor->y = y;
-    printf("\033[%d;%dH", cursor->y, cursor->x); // Les coordonn�es sont 1-index�es, 1,1 est le coin sup�rieur gauche, le H � la fin signifie de deplacer le curseur a une position donn�e
-}
-void setCursorColor(const char* color) {
-    printf("\033[%sm", color);   // 30 : Noir 31 : Rouge 32 : Vert 33 : Jaune 34 : Bleu 35 : Magenta 36 : Cyan 37 : Blanc, le m actives les attributs graphique (couleur, effets etc...)
+    printf("\033[%d;%dH", cursor->y, cursor->x); // Les coordonnées sont 1-indexées, 1,1 est le coin supérieur gauche, le H à la fin signifie de deplacer le curseur a une position donnée
 }
 
 Cursor createCursor(Cursor* existingCursor, int x, int y) {
     if (existingCursor != NULL) {
         existingCursor->x = x;
         existingCursor->y = y;
-        return *existingCursor;  // Retourne le curseur modifi�
+        return *existingCursor;  // Retourne le curseur modifié
     } else {
         Cursor newCursor;
         newCursor.x = x;
         newCursor.y = y;
         return newCursor;  // Retourne un nouveau curseur
     }
-}
-void resetAttributes() {
-    printf("\033[0m"); // Reset la couleur et le style du curseur, 0m reset tout les attributs graphiques
-}
-
-void clearScreen() {
-    printf("\033[2J\033[H");  // 2J: Nettoie l'�cran, H: Remet le curseur au coin sup�rieur gauche
-}
-
-void hideCursor() {
-    printf("\033[?25l");    // 25l: Desactive l'affichage du curseur 
-}
-
-void showCursor() {
-    printf("\033[?25h");    // 25h: Active l'affichage du curseur
 }
 
 int main(int argc, char *argv[]) {
@@ -114,13 +105,13 @@ int main(int argc, char *argv[]) {
     }
     SDL_Window* window = SDL_CreateWindow("Test SDL", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
     if (!window) {
-        printf("Erreur de cr�ation de la fen�tre : %s\n", SDL_GetError());
+        printf("Erreur de création de la fenêtre : %s\n", SDL_GetError());
         SDL_Quit();
         return 1;
     }
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
-        printf("Erreur de cr�ation du renderer : %s\n", SDL_GetError());
+        printf("Erreur de création du renderer : %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
@@ -136,18 +127,22 @@ int main(int argc, char *argv[]) {
     
     moveCursor(&cursor1, 80, 80);
     Cursor cursor228 = { 2, 4 };
-    draw_shape(renderer,"oval",cursor1, 3, 2, 255, 0, 0, 1);
     moveCursor(&cursor1, 10, 10);
     draw_shape(renderer,"ligne",cursor1, 2, 2, 0, 255, 255, 1);
-    moveCursor(&cursor1, 10, 50);
+    moveCursor(&cursor1, 100, 100);
     draw_shape(renderer, "rectangle",cursor1, 21, 12, 255, 255, 255,1);
+        draw_shape(renderer, "rectangle",cursor1, cursor1.x, cursor1.y, 255, 255, 255,1);
+    moveCursor(&cursor1, 100, 100);
+    setCursorColor("32");
+    drawCircle(renderer, cursor1.x, cursor1.y, 50);
     SDL_RenderPresent(renderer);
-
     SDL_Delay(5000);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 
+    return EXIT_SUCCESS;
+}
     return EXIT_SUCCESS;
 }
