@@ -198,33 +198,32 @@ ShapeType get_shape_type(const char* shape_type) {                  // retourne 
     return SHAPE_UNKNOWN;
 }
 
-void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, int x2, int y2, int t, int z, double angle) {
+void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, int x2, int y2, int z, double angle) {
     SDL_SetRenderDrawColor(renderer, cursor.color.r, cursor.color.g, cursor.color.b, 255);     // couleur
     printf("couleur : %d %d %d\n", cursor.color.r, cursor.color.g, cursor.color.b);
-    ShapeType type = get_shape_type(shape_type);        // forme
+    ShapeType type = get_shape_type(shape_type);    // Forme
 
     switch (type) {
         case SHAPE_LINE:
-            for (int i = 0; i < t; i++) { // Ajouter une épaisseur en décalant les lignes
+            for (int i = 0; i < cursor.t; i++) { // Ajouter une épaisseur en décalant les lignes
                 SDL_RenderDrawLine(renderer, cursor.x + i, cursor.y + i, x2 + i, y2 + i);
             }
             break;
 
-
         case SHAPE_RECTANGLE: {
-            for (int i = 0; i < t; i++) { // Ajouter une épaisseur en créant plusieurs rectangles
+            for (int i = 0; i < cursor.t; i++) { // Ajouter une épaisseur en créant plusieurs rectangles
                 SDL_Rect rect = {cursor.x - i, cursor.y - i, (x2 - cursor.x) + 2 * i, (y2 - cursor.y) + 2 * i};
                 SDL_RenderDrawRect(renderer, &rect);
             }
             break;
         }
-        
+
         case SHAPE_OVAL: {
             int radius_x = (x2 - cursor.x) / 2;
             int radius_y = (y2 - cursor.y) / 2;
             int center_x = cursor.x + radius_x;
             int center_y = cursor.y + radius_y;
-            for (int i = 0; i < t; i++) { // Ajouter une épaisseur en augmentant les rayons
+            for (int i = 0; i < cursor.t; i++) { // Ajouter une épaisseur en augmentant les rayons
                 for (int angle = 0; angle < 360; angle++) {
                     double radian = angle * (M_PI / 180.0);
                     int px = center_x + (radius_x + i) * cos(radian);
@@ -234,9 +233,16 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, i
             }
             break;
         }
+
+        case SHAPE_POINT:
+            for (int w = 0; w < cursor.t; ++w) { // Ajouter une épaisseur en répétant les points
+                SDL_RenderDrawPoint(renderer, cursor.x + w, cursor.y + w);
+            }
+            break;
+
       case SHAPE_CIRCLE:{
             int radius = z;
-            for (int i = 0; i < t; i++) {
+            for (int i = 0; i < cursor.t; i++) {
                 for (double angle = 0; angle < 2 * M_PI; angle += 0.001) { // On parcourt l'angle en radians
                 int x = x2 + (int)((radius + i) * cos(angle));
                 int y = y2 + (int)((radius + i) * sin(angle));
@@ -246,14 +252,9 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, i
             break;
       }
 
-        case SHAPE_POINT:
-            for (int w = 0; w < width; ++w) {
-                SDL_RenderDrawPoint(renderer, cursor.x + w, cursor.y + w);
-            }
-            break;
         case SHAPE_ARC:{
             int radius = z;
-            for (int i = 0; i < t; i++) { // Boucle pour l'épaisseur
+            for (int i = 0; i < cursor.t; i++) { // Boucle pour l'épaisseur
                 for (double a = 0; a <= angle; a += 0.001) { // Parcourir l'arc
                     int x = x2 + (int)((radius + i) * cos(a));
                     int y = y2 + (int)((radius + i) * sin(a));
@@ -262,14 +263,13 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, i
             }
             break;
         }
-
-            break;
         case SHAPE_UNKNOWN:
         default:
             printf("La forme '%s' n'existe pas.\n", shape_type);
             break;
     }
 }
+
 
 Cursor setCursorColor(Cursor* cursor, int r, int g, int b) {
     cursor->color.r = r;
@@ -330,16 +330,22 @@ int main(int argc, char *argv[]) {
     SDL_RenderClear(renderer);
 
  //Exemples
-    Cursor cursor1 = { 1, 2, 0, { 255, 0, 255 }, 5};
+Cursor cursor1 = { 1, 2, 0, { 255, 0, 255 }, 5};
     moveCursor(&cursor1, 100, 100, cursor1.t);
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    draw_shape(renderer, "arc",cursor1, cursor1.x, cursor1.y, cursor1.t, 100, M_PI);
+    draw_shape(renderer, "arc",cursor1, cursor1.x, cursor1.y, 100, M_PI);
     moveCursor(&cursor1, 200, 250, 1);
     cursor1 = setCursorColor(&cursor1, 0, 0, 255);
-    draw_shape(renderer, "circle",cursor1, cursor1.x, cursor1.y, cursor1.t, 100, M_PI);
+    draw_shape(renderer, "cercle",cursor1, cursor1.x, cursor1.y, 100, M_PI);
     cursor1 = setCursorColor(&cursor1, 255, 0, 0);
     moveCursor(&cursor1, 500, 350, 3);
-    draw_shape(renderer, "rectangle",cursor1, cursor1.x+200, cursor1.y +50, cursor1.t, 100, M_PI);
+    draw_shape(renderer, "rectangle",cursor1, cursor1.x+200, cursor1.y +50, 100, M_PI);
+    moveCursor(&cursor1, 400, 400, 2);
+    cursor1 = setCursorColor(&cursor1, 255, 255, 255);
+    draw_shape(renderer, "ligne",cursor1, cursor1.x +50, cursor1.y, 100, M_PI);
+    moveCursor(&cursor1, 500, 200, 6);
+    cursor1 = setCursorColor(&cursor1, 0, 255, 0);
+    draw_shape(renderer, "oval",cursor1, cursor1.x+40, cursor1.y +80, 100, M_PI);
     SDL_RenderPresent(renderer);
     SDL_Delay(5000);
 
