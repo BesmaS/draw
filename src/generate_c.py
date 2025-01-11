@@ -1,5 +1,5 @@
 import subprocess
-
+from semantic_analyzer import evaluate_expression
 # Étape 1 : Programme C stocké dans une liste
 c_header = [
     "#include <SDL2/SDL.h>",
@@ -13,13 +13,24 @@ c_header = [
     "    SHAPE_RECTANGLE,",
     "    SHAPE_OVAL,",
     "    SHAPE_POINT,",
+    "    SHAPE_CIRCLE,",
+    "    SHAPE_ARC,",
     "    SHAPE_UNKNOWN",
     "} ShapeType;",
     "",
     "typedef struct {",
+    "int r;",
+    "int g;",
+    "int b;"
+    "} Color;"
+    "",
+    "typedef struct {",
     "int x;",
     "int y;",
+    "int radius;",
+    "Color color;",
     "} Cursor;",
+    "",
 ]
 
 
@@ -29,11 +40,13 @@ c_draw_shape_func = [
     "    if (strcmp(shape_type, \"rectangle\") == 0) return SHAPE_RECTANGLE;",
     "    if (strcmp(shape_type, \"oval\") == 0) return SHAPE_OVAL;",
     "    if (strcmp(shape_type, \"point\") == 0) return SHAPE_POINT;",
+    "    if (strcmp(shape_type, \"arc\") == 0) return SHAPE_ARC;",
+    "    if (strcmp(shape_type, \"circle\") == 0) return SHAPE_CIRCLE;",
     "    return SHAPE_UNKNOWN;",
     "}",
     "",
-    "void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, int x2, int y2, int r, int g, int b, int width) {",
-    "    SDL_SetRenderDrawColor(renderer, r, g, b, 255);     // couleur",
+    "void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, int x2, int y2,int z) {",
+    "    SDL_SetRenderDrawColor(renderer, cursor.color.r, cursor.color.g, cursor.color.b, 255);     // couleur",
     "    ShapeType type = get_shape_type(shape_type);        // forme",
     "",
     "    switch (type) {",
@@ -41,13 +54,14 @@ c_draw_shape_func = [
     "            SDL_RenderDrawLine(renderer, cursor.x, cursor.y, x2, y2);",
     "            break;",
     "",
-    "        case SHAPE_RECTANGLE: {",
+    "        case SHAPE_RECTANGLE:",
+    "            int height = x2;",
+    "            int width = y2;",
     "            SDL_Rect rect = {cursor.x, cursor.y, x2 - cursor.x, y2 - cursor.y};",
     "            SDL_RenderDrawRect(renderer, &rect);",
     "            break;",
-    "        }",
     "",
-    "        case SHAPE_OVAL: {",
+    "        case SHAPE_OVAL: ",
     "            int radius_x = (x2 - cursor.x) / 2;",
     "            int radius_y = (y2 - cursor.y) / 2;",
     "            int center_x = cursor.x + radius_x;",
@@ -59,7 +73,25 @@ c_draw_shape_func = [
     "                SDL_RenderDrawPoint(renderer, px, py);",
     "            }",
     "            break;",
-    "        }",
+    "",
+    "        case SHAPE_CIRCLE:",
+    "           int radius = z;",
+    "           for (double angle = 0; angle < 2 * M_PI; angle += 0.001) {   // on parcourt l'angle en radian",
+    "               int x = x2 + (int)(radius * cos(angle));",
+    "               int y = y2 + (int)(radius * sin(angle));",
+    "               SDL_RenderDrawPoint(renderer, x, y);",
+    "           }",
+    "        break;",
+    "",
+    "        case SHAPE_ARC:",
+    "           radius = x2;",
+    "           double angle = y2;",
+    "           for (double a = 0; a <= angle; a += 0.001) {",
+    "               int x = cursor.x + (int)(radius * cos(a));",
+    "               int y = cursor.y + (int)(radius * sin(a));",
+    "               SDL_RenderDrawPoint(renderer, x, y);",
+    "           }",
+    "        break;",
     "",
     "        case SHAPE_POINT:",
     "            for (int w = 0; w < width; ++w) {",
@@ -79,40 +111,33 @@ c_draw_shape_func = [
     "void moveCursor(Cursor* cursor, int x, int y) {",
     "    cursor->x = x;",
     "    cursor->y = y;",
-    "    printf(\"\\033[%d;%dH\", cursor->y, cursor->x); // Les coordonnées sont 1-indexées, 1,1 est le coin supérieur gauche, le H à la fin signifie de deplacer le curseur a une position donnée",
     "}",
-    "void setCursorColor(const char* color) {",
-    "    printf(\"\\033[%sm\", color);   // 30 : Noir 31 : Rouge 32 : Vert 33 : Jaune 34 : Bleu 35 : Magenta 36 : Cyan 37 : Blanc, le m actives les attributs graphique (couleur, effets etc...)",
+    "",
+    "void rotateCursor(Cursor* cursor, int angle) {",
+    "   cursor->radius =  angle;",
+    "}",
+    "",
+    "void setCursorColor(Cursor* cursor, int r, int g, int b) {",
+    "   cursor->color.r = r;",
+    "   cursor->color.g = g;",
+    "   cursor->color.b = b;",
     "}",
     "",
      "Cursor createCursor(Cursor* existingCursor, int x, int y) {",
     "    if (existingCursor != NULL) {",
     "        existingCursor->x = x;",
     "        existingCursor->y = y;",
+    "        //Couleur par défaut",
+    "",        
     "        return *existingCursor;  // Retourne le curseur modifié",
     "    } else {",
     "        Cursor newCursor;",
     "        newCursor.x = x;",
     "        newCursor.y = y;",
+    "        setCursorColor(&newCursor, 255, 255, 255);",
     "        return newCursor;  // Retourne un nouveau curseur",
     "    }",
     "}"
-    "",
-    "void resetAttributes() {",
-    "    printf(\"\\033[0m\"); // Reset la couleur et le style du curseur, 0m reset tout les attributs graphiques",
-    "}",
-    "",
-    "void clearScreen() {",
-    "    printf(\"\\033[2J\\033[H\");  // 2J: Nettoie l'écran, H: Remet le curseur au coin supérieur gauche",
-    "}",
-    "",
-    "void hideCursor() {",
-    "    printf(\"\\033[?25l\");    // 25l: Desactive l'affichage du curseur ",
-    "}",
-    "",
-    "void showCursor() {",
-    "    printf(\"\\033[?25h\");    // 25h: Active l'affichage du curseur",
-    "}",
     "",
 ]
 
@@ -155,10 +180,20 @@ c_main_end = [
     "}"
 ]
 
-from pathlib import Path
-import json
+def HexToRGB(hex):
+    hex = hex.lstrip('#')
+    
+    r = int(hex[0:2], 16)
+    g = int(hex[2:4], 16)   
+    b = int(hex[4:6], 16)
+    
+    return r, g, b
+
+
+c_main_content = []
+created_cursors = set() # Stocker les curseurs créés
 # Étape 2 : Écrire le fichier C
-def generate_c_code(parsed_output, depth=0):
+def get_instruction(parsed_output, depth=4):
     """
     Génère du code C basé sur une structure AST.
     Traite les instructions `createCursor`.
@@ -166,14 +201,12 @@ def generate_c_code(parsed_output, depth=0):
     :param parsed_output: Dictionnaire représentant l'AST.
     :param depth: Profondeur actuelle pour l'indentation (utilisé pour déboguer).
     """
-    print('parsed_output in generate c', parsed_output)
+    #print('parsed_output in generate c', parsed_output)
     indent = " " * depth
     print(f"{indent}Parsed output received in generate_c_code.")
-    
+
     if isinstance(parsed_output, dict):
         print(f"{indent}Processing root node.")
-        c_main_content = []
-        created_cursors = set() # Stocker les curseurs créés
         # Parcourir les enfants de la racine
         children = parsed_output.get("children", [])
         for node in children:
@@ -204,7 +237,7 @@ def generate_c_code(parsed_output, depth=0):
                 else:
                     print(f"{indent}Creating new cursor '{cursorId_value}'.")
                     created_cursors.add(cursorId_value)
-                    c_main_content.append(f"Cursor {cursorId_value} = {{ {x_value}, {y_value} }};")
+                    c_main_content.append(f"Cursor {cursorId_value} = {{ {x_value}, {y_value}, 0, 255, 255, 255 }};")
                     
             elif node_type == "move":
                 print(f"{indent}Found 'move' node.")
@@ -214,7 +247,14 @@ def generate_c_code(parsed_output, depth=0):
                 cursorId_value = cursorId.get("value")
                 move_value = move.get("value")
                 c_main_content.append(f"moveCursor(&{cursorId_value}, {move_value}, {move_value});")
-                
+            elif node_type == "setColor":
+                print(f"{indent}Found 'setColor' node.")
+                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
+                HexColor = next((child for child in node.get("children",[]) if child.get("type") == "color"),None)
+
+                cursorId_value = cursorId.get("value")  
+                r,g,b = HexToRGB(HexColor.get("value"))                
+                c_main_content.append(f"setCursorColor(&{cursorId_value}, {r}, {g},{b});")
             elif node_type == "rotate":
                 print(f"{indent}Found 'rotate' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
@@ -238,26 +278,38 @@ def generate_c_code(parsed_output, depth=0):
                 x_value = x.get("value")
                 y_value = y.get("value")
 
-                c_main_content.append(f"draw_shape(renderer,\"oval\",{cursorId_value}, {x_value}, {y_value}, 255, 0, 0, 1);")
-                    # draw_shape(renderer, "oval", cursor, 80, 80, 255, 0, 0, 100); 
+                c_main_content.append(f"draw_shape(renderer,\"circle\",{cursorId_value}, {x_value}, {y_value}, 1);")
+
+            elif node_type == "drawOval":
+                print(f"{indent}Found 'drawCircle' node.")
+                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
+                radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
+                coordinates = next((child for child in node.get("children",[]) if child.get("type") == "coordinates"), None)
+                
+                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
+                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
+
+                cursorId_value = cursorId.get("value")
+                radius_value = radius.get("value")
+                x_value = x.get("value")
+                y_value = y.get("value")
+
+                c_main_content.append(f"draw_shape(renderer,\"oval\",{cursorId_value}, {x_value}, {y_value}, 1, 1, 1);")
+                          
             elif node_type == "drawLine":
                 print(f"{indent}Found 'drawLine' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
-                start_coordinates = node.get("children")[1]
-                end_coordinates = node.get("children")[2]
+                coordinates = node.get("children")[2]
 
-                #start_x = next((child for child in start_coordinates.get("children", []) if child.get("type") == "x"), None)
-                #start_y = next((child for child in start_coordinates.get("children", []) if child.get("type") == "y"), None)
-                end_x = next((child for child in end_coordinates.get("children", []) if child.get("type") == "x"), None)
-                end_y = next((child for child in end_coordinates.get("children", []) if child.get("type") == "y"), None)
+                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
+                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
 
                 cursorId_value = cursorId.get("value")
-                #start_x_value = start_x.get("value")
-                #start_y_value = start_y.get("value")
-                end_x_value = end_x.get("value")
-                end_y_value = end_y.get("value")
+                
+                x_value = x.get("value")
+                y_value = y.get("value")
 
-                c_main_content.append(f"draw_shape(renderer,\"ligne\",{cursorId_value}, {end_x_value}, {end_y_value}, 0, 255, 255, 1);")
+                c_main_content.append(f"draw_shape(renderer,\"ligne\",{cursorId_value}, {x_value}, {y_value}, 1);")
                 
             elif node_type == "drawRectangle":
                 print(f"{indent}Found 'drawRectangle' node.")
@@ -275,19 +327,87 @@ def generate_c_code(parsed_output, depth=0):
                 x_value = x.get("value")
                 y_value = y.get("value")
 
-                c_main_content.append(f"draw_shape(renderer, \"rectangle\",{cursorId_value}, {width_value}, {height_value}, 255, 255, 255,1);")
+                c_main_content.append(f"draw_shape(renderer, \"rectangle\",{cursorId_value}, {height_value}, {width_value}, 1);")
 
-            #elif node_type == "drawArc":
-               
+            elif node_type == "drawArc":
+                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
+                radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
+                angle = next((child for child in node.get("children",[]) if child.get("type") == "start_angle"), None)
 
+                cursorId_value = cursorId.get("value")
+                radius_value = radius.get("value")
+                angle_value = angle.get("value")
+
+                c_main_content.append(f"draw_shape(renderer,\"arc\",{cursorId_value}, {radius_value}, {angle_value}, 1);")
+                #draw_shape(renderer, "arc",cursor1, 10, 5,1);
+            elif node_type == "assignment":
+                assignmentId_value = node.get("value") 
+                assignment_type = next((child for child in node.get("children", []) if child.get("type") == "number"), None)
+                if assignment_type:
+                    assignment_value = assignment_type.get("value")
+                    c_main_content.append(f"int {assignmentId_value} = {assignment_value};") 
+            elif node_type == "if":
+                # Générer le code pour la condition
+                comparaison = next((child for child in node.get("children", []) if child.get("type") == "comparison"), None)
+                if comparaison:
+                    operator = comparaison.get("value")
+                    left = comparaison.get("children", [])[0]
+                    right = comparaison.get("children", [])[1]
+
+                    left_value = left.get("value") 
+                    right_value = right.get("value") 
+
+                    # Ajouter la condition "if" au contenu
+                    c_main_content.append(f"if ({left_value} {operator} {right_value}) {{")
+                    print(f"Condition: if ({left_value} {operator} {right_value})")
+                else:
+                    # Si aucune comparaison, afficher un message d'erreur pour le debug
+                    print("Erreur : aucune comparaison trouvée dans le bloc if.")
+
+                # Vérifier si un bloc "else" est présent
+                elsecdt = next((child for child in node.get("children", []) if child.get("type") == "else"), None)
+
+                # Générer le code pour le bloc "program" associé au "if"
+                program_node = next((child for child in node.get("children", []) if child.get("type") == "program"), None)
+                if program_node:
+                    get_instruction(program_node)
+
+                # Si pas de bloc "else", fermer le bloc "if"
+                if not elsecdt:
+                    c_main_content.append("}")  # Fermer le bloc "if"
+
+                # Gérer le bloc "else" s'il est présent
+                if elsecdt:
+                    c_main_content.append("} else {")  # Ajouter la déclaration "else"
+                    # Générer le code pour le programme du bloc "else"
+                    else_program_node = next((child for child in elsecdt.get("children", []) if child.get("type") == "program"), None)
+                    if else_program_node:
+                        get_instruction(else_program_node)
+                    c_main_content.append("}")  # Fermer le bloc "else"
+
+
+            elif node_type == "while":
+                print(f"{indent}Found 'while' node.")
+                comparaison = next((child for child in node.get("children", []) if child.get("type") == "comparaison"), None)
+                if comparaison:
+                    operator = comparaison.get("value")
+                    left = comparaison.get("children", [])[0]
+                    right = comparaison.get("children", [])[1]
+
+                    left_value = left.get("value") 
+                    right_value = right.get("value") 
+
+                    c_main_content.append(f"while ({left_value} {operator} {right_value}) {{")
             else:
                 print(f"{indent}Skipping node of type '{node_type}'.")
 
     else:
         raise TypeError("Expected 'parsed_output' to be a dictionary representing the AST.")
 
-    print(c_main_content)
+def generate_c_code(parsed_output):
+    get_instruction(parsed_output)
     complete_code = c_header + c_draw_shape_func + c_main_begin + c_main_content + c_main_end
+    print(f"c_main_content: {c_main_content}")
     filename = "Output.c"
     with open(filename, "w") as file:
         file.write("\n".join(complete_code))
@@ -314,227 +434,3 @@ def generate_c_code(parsed_output, depth=0):
         print(f"Erreur lors de l'exécution : {e}")
         print(e.stderr)
 
-#Exemple pour l'execution
-parsed_output = {
-    "type": "program",
-    "value": None,
-    "children": [
-        {
-            "type": "createCursor",
-            "value": None,
-            "children": [
-                {
-                    "type": "identifiant",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "coordinates",
-                    "value": None,
-                    "children": [
-                        {
-                            "type": "x",
-                            "value": 1,
-                            "children": []
-                        },
-                        {
-                            "type": "y",
-                            "value": 2,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "type": "move",
-            "value": None,
-            "children": [
-                {
-                    "type": "identifiant",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "value",
-                    "value": 50,
-                    "children": []
-                }
-            ]
-        },
-        {
-            "type": "rotate",
-            "value": None,
-            "children": [
-                {
-                    "type": "identifiant",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "value",
-                    "value": 90,
-                    "children": []
-                }
-            ]
-        },
-        {
-            "type": "drawCircle",
-            "value": None,
-            "children": [
-                {
-                    "type": "cursor",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "radius",
-                    "value": 120,
-                    "children": []
-                },
-                {
-                    "type": "coordinates",
-                    "value": None,
-                    "children": [
-                        {
-                            "type": "x",
-                            "value": 3,
-                            "children": []
-                        },
-                        {
-                            "type": "y",
-                            "value": 2,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "type": "drawLine",
-            "value": None,
-            "children": [
-                {
-                    "type": "cursor",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "coordinates",
-                    "value": None,
-                    "children": [
-                        {
-                            "type": "x",
-                            "value": 3,
-                            "children": []
-                        },
-                        {
-                            "type": "y",
-                            "value": 4,
-                            "children": []
-                        }
-                    ]
-                },
-                {
-                    "type": "coordinates",
-                    "value": None,
-                    "children": [
-                        {
-                            "type": "x",
-                            "value": 2,
-                            "children": []
-                        },
-                        {
-                            "type": "y",
-                            "value": 2,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "type": "drawArc",
-            "value": None,
-            "children": [
-                {
-                    "type": "cursor",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "radius",
-                    "value": 3,
-                    "children": []
-                },
-                {
-                    "type": "start_angle",
-                    "value": 120,
-                    "children": []
-                },
-                {
-                    "type": "end_angle",
-                    "value": 80,
-                    "children": []
-                },
-                {
-                    "type": "coordinates",
-                    "value": None,
-                    "children": [
-                        {
-                            "type": "x",
-                            "value": 2,
-                            "children": []
-                        },
-                        {
-                            "type": "y",
-                            "value": 2,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "type": "drawRectangle",
-            "value": None,
-            "children": [
-                {
-                    "type": "cursor",
-                    "value": "cursor1",
-                    "children": []
-                },
-                {
-                    "type": "width",
-                    "value": 21,
-                    "children": []
-                },
-                {
-                    "type": "height",
-                    "value": 12,
-                    "children": []
-                },
-                {
-                    "type": "coordinates",
-                    "value": None,
-                    "children": [
-                        {
-                            "type": "x",
-                            "value": 2,
-                            "children": []
-                        },
-                        {
-                            "type": "y",
-                            "value": 3,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
-}
-
-
-
-#generate_c_code(parsed_output)
