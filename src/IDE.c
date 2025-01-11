@@ -240,8 +240,9 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, i
                 SDL_RenderDrawPoint(renderer, cursor.x + w, cursor.y + w);
             }
             break;
-        case SHAPE_ARC:
-            int angle = x2;
+        case SHAPE_ARC:   
+            radius = x2;
+            double angle = y2;
             for (double a = 0; a <= angle; a += 0.001) {
                 int x = cursor.x + (int)(radius * cos(a));
                 int y = cursor.y + (int)(radius * sin(a));
@@ -332,7 +333,7 @@ int main(int argc, char *argv[]) {
     draw_shape(renderer, "circle",cursor1, 500, 500,10);
     draw_shape(renderer, "oval",cursor1, 1, 1,1);
     moveCursor(&cursor1, 400, 77);
-     draw_shape(renderer, "arc",cursor1, 77, 1,1);
+     draw_shape(renderer, "arc",cursor1, 10, 5,1);
     //draw_shape(renderer, "circle",cursor1, 50,1);
     SDL_RenderPresent(renderer);
     SDL_Delay(5000);
