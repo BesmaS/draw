@@ -67,6 +67,14 @@ void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, i
 }
 
 
+void drawArc(SDL_Renderer *renderer, int x0, int y0, int radius, double angle) {
+    for (double a = 0; a <= angle; a += 0.001) {
+        int x = x0 + (int)(radius * cos(a));
+        int y = y0 + (int)(radius * sin(a));
+        SDL_RenderDrawPoint(renderer, x, y);
+    }
+}
+
 void drawCircle(SDL_Renderer *renderer, int x0, int y0, int radius) {
     for (double angle = 0; angle < 2 * M_PI; angle += 0.001) {   // on parcourt l'angle en radian
         int x = x0 + (int)(radius * cos(angle));
