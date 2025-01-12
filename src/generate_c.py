@@ -41,7 +41,7 @@ c_header = [
     "",
 ]
 
-c_draw_shape_func = [
+c_draw_shape_function = [
     "ShapeType get_shape_type(const char* shape_type) {                  // retourne le type de forme",
     "    if (strcmp(shape_type, \"ligne\") == 0) return SHAPE_LINE;",
     "    if (strcmp(shape_type, \"rectangle\") == 0) return SHAPE_RECTANGLE;",
@@ -137,7 +137,7 @@ c_draw_shape_func = [
     "    }",
     "}"
     "",
-    "// Utilisation des séquences d'echappement ANSI pour gérer le curseur",
+    "// fonctions pour le curseur",
     "",
     "void moveCursor(Cursor* cursor, int x, int y) {",
     "    cursor->x = x;",
@@ -483,7 +483,7 @@ def get_instruction(parsed_output, depth=4):
 def generate_c_code(parsed_output):
     c_main_content.clear()
     get_instruction(parsed_output)
-    complete_code = c_header + c_draw_shape_func + c_main_begin + c_main_content + c_main_end
+    complete_code = c_header + c_draw_shape_function + c_main_begin + c_main_content + c_main_end
     print(f"c_main_content: {c_main_content}")
     filename = "Output.c"
     with open(filename, "w") as file:
