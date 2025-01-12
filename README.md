@@ -24,3 +24,11 @@ Before you can build and run Draw++, ensure you have the following installed:
 To start using Draw++, open the Python-based IDE and load or create a new script. Use the provided commands to draw shapes and manipulate them on the canvas.
 
 
+
+| Nom             | Prénom   | Groupe      |
+|---              |---       |---          |
+| SAIDI           | Besma    | ING1 GIA1   |
+| VINAYAKAM       | Celiane  | ING1 GIA1   |
+| MENSAH          | Elyas    | ING1 GIA1   |
+| BEN MABROUK     | Fares    | ING1 GIA1   |
+| AHMED           | Naël     | ING1 GIA1   |
