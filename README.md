@@ -26,32 +26,30 @@ To start using Draw++, open the Python-based IDE and load or create a new script
 
 Here are some examples of how to use Draw++:
 
-### Example 1: Drawing a Rectangle
-
+### Example 1: create a Cursor
 ```python
-# Draw a rectangle at position (50, 50) with width 100 and height 200
-draw_rectangle(50, 50, 100, 200)
+# Create a cursor at position (10,20)
+createCursor(cursor1,10,20);
 ```
 
-### Example 2: Drawing a Circle
+### Example 2: set a color
 
 ```python
-# Draw a circle at position (150, 150) with radius 75
-draw_circle(150, 150, 75)
+# Set color to the cursor
+setColor(cursor1,#FF5733);
 ```
 
-### Example 3: Moving a Shape
+### Example 3: Move a Cursor
 
 ```python
-# Move the rectangle to a new position (200, 200)
-move_shape('rectangle', 200, 200)
+# Move to a new position
+move(cursor1,50);
 ```
-
-### Example 4: Changing Shape Color
+### Example 3: Draw rectangles
 
 ```python
-# Change the color of the circle to blue
-change_color('circle', 'blue')
+# Draw rectangles
+drawRectangle(cursor1,21,12,2,3);
 ```
 
 These examples demonstrate basic usage of Draw++ to create and manipulate shapes using the provided scripting commands.
