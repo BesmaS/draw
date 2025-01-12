@@ -7,9 +7,10 @@ Draw++ is a graphical drawing application that allows users to create and manipu
 ## Prerequisites
 
 Before you can build and run Draw++, ensure you have the following installed:
-
-- SDL2
 - Python 3.x
+- - Tkinter
+- ttkbootstrap
+- SDL2
 - GCC 
 
 ## Installation
