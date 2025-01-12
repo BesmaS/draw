@@ -60,11 +60,7 @@ c_draw_shape_function = [
     "    switch (type) {",
     "        case SHAPE_LINE:",
     "            for (int i = 0; i < t; i++) {",
-    "                int x1_rot = cursor.x + (cursor.x + i - cursor.x) * cos(theta) - (cursor.y + i - cursor.y) * sin(theta);",
-    "                int y1_rot = cursor.y + (cursor.x + i - cursor.x) * sin(theta) + (cursor.y + i - cursor.y) * cos(theta);",
-    "                int x2_rot = cursor.x + (x2 + i - cursor.x) * cos(theta) - (y2 + i - cursor.y) * sin(theta);",
-    "                int y2_rot = cursor.y + (x2 + i - cursor.x) * sin(theta) + (y2 + i - cursor.y) * cos(theta);",
-    "                SDL_RenderDrawLine(renderer, x1_rot, y1_rot, x2_rot, y2_rot);",
+    "                 SDL_RenderDrawLine(renderer, cursor.x, cursor.y, x2, y2);"
     "            }",
     "            break;",
     "        case SHAPE_RECTANGLE: {",
