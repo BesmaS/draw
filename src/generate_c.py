@@ -1,436 +1,240 @@
-import subprocess
-from semantic_analyzer import evaluate_expression
-# Étape 1 : Programme C stocké dans une liste
-c_header = [
-    "#include <SDL2/SDL.h>",
-    "#include <stdio.h>",
-    "#include <stdlib.h>",
-    "#include <string.h>",
-    "#include <math.h>",
-    "",
-    "typedef enum {",
-    "    SHAPE_LINE,",
-    "    SHAPE_RECTANGLE,",
-    "    SHAPE_OVAL,",
-    "    SHAPE_POINT,",
-    "    SHAPE_CIRCLE,",
-    "    SHAPE_ARC,",
-    "    SHAPE_UNKNOWN",
-    "} ShapeType;",
-    "",
-    "typedef struct {",
-    "int r;",
-    "int g;",
-    "int b;"
-    "} Color;"
-    "",
-    "typedef struct {",
-    "int x;",
-    "int y;",
-    "int radius;",
-    "Color color;",
-    "} Cursor;",
-    "",
-]
+# Juste l'aspect de base IDE
+from tkinter import *
+from tkinter.filedialog import asksaveasfilename, askopenfilename
+import ttkbootstrap as ttk # type: ignore
+from ttkbootstrap.constants import *# type: ignore #nv
+from tokenizer import tokenize # type: ignore
+from parser import Parser # type: ignore
+from semantic_analyzer import validate_program  # Importer la fonction validate_program pour effectuer la validation sémantique
+import json
+from parser  import ASTNode
+from generate_c import generate_c_code
 
 
-c_draw_shape_func = [
-    "ShapeType get_shape_type(const char* shape_type) {                  // retourne le type de forme",
-    "    if (strcmp(shape_type, \"ligne\") == 0) return SHAPE_LINE;",
-    "    if (strcmp(shape_type, \"rectangle\") == 0) return SHAPE_RECTANGLE;",
-    "    if (strcmp(shape_type, \"oval\") == 0) return SHAPE_OVAL;",
-    "    if (strcmp(shape_type, \"point\") == 0) return SHAPE_POINT;",
-    "    if (strcmp(shape_type, \"arc\") == 0) return SHAPE_ARC;",
-    "    if (strcmp(shape_type, \"circle\") == 0) return SHAPE_CIRCLE;",
-    "    return SHAPE_UNKNOWN;",
-    "}",
-    "",
-    "void draw_shape(SDL_Renderer* renderer, const char* shape_type, Cursor cursor, int x2, int y2,int z) {",
-    "    SDL_SetRenderDrawColor(renderer, cursor.color.r, cursor.color.g, cursor.color.b, 255);     // couleur",
-    "    ShapeType type = get_shape_type(shape_type);        // forme",
-    "",
-    "    switch (type) {",
-    "        case SHAPE_LINE:",
-    "            SDL_RenderDrawLine(renderer, cursor.x, cursor.y, x2, y2);",
-    "            break;",
-    "",
-    "        case SHAPE_RECTANGLE:",
-    "            int height = x2;",
-    "            int width = y2;",
-    "            SDL_Rect rect = {cursor.x, cursor.y, x2 - cursor.x, y2 - cursor.y};",
-    "            SDL_RenderDrawRect(renderer, &rect);",
-    "            break;",
-    "",
-    "        case SHAPE_OVAL: ",
-    "            int radius_x = (x2 - cursor.x) / 2;",
-    "            int radius_y = (y2 - cursor.y) / 2;",
-    "            int center_x = cursor.x + radius_x;",
-    "            int center_y = cursor.y + radius_y;",
-    "            for (int angle = 0; angle < 360; angle++) {",
-    "                double radian = angle * (M_PI / 180.0);",
-    "                int px = center_x + radius_x * cos(radian);",
-    "                int py = center_y + radius_y * sin(radian);",
-    "                SDL_RenderDrawPoint(renderer, px, py);",
-    "            }",
-    "            break;",
-    "",
-    "        case SHAPE_CIRCLE:",
-    "           int radius = z;",
-    "           for (double angle = 0; angle < 2 * M_PI; angle += 0.001) {   // on parcourt l'angle en radian",
-    "               int x = x2 + (int)(radius * cos(angle));",
-    "               int y = y2 + (int)(radius * sin(angle));",
-    "               SDL_RenderDrawPoint(renderer, x, y);",
-    "           }",
-    "        break;",
-    "",
-    "        case SHAPE_ARC:",
-    "           radius = x2;",
-    "           double angle = y2;",
-    "           for (double a = 0; a <= angle; a += 0.001) {",
-    "               int x = cursor.x + (int)(radius * cos(a));",
-    "               int y = cursor.y + (int)(radius * sin(a));",
-    "               SDL_RenderDrawPoint(renderer, x, y);",
-    "           }",
-    "        break;",
-    "",
-    "        case SHAPE_POINT:",
-    "            for (int w = 0; w < width; ++w) {",
-    "                SDL_RenderDrawPoint(renderer, cursor.x + w, cursor.y + w);",
-    "            }",
-    "            break;",
-    "",
-    "        case SHAPE_UNKNOWN:",
-    "        default:",
-    "            printf(\"La forme '%s' n'existe pas.\\n\", shape_type);",
-    "            break;",
-    "    }",
-    "}",
-    "",
-    "// Utilisation des séquences d'echappement ANSI pour gérer le curseur",
-    "",
-    "void moveCursor(Cursor* cursor, int x, int y) {",
-    "    cursor->x = x;",
-    "    cursor->y = y;",
-    "}",
-    "",
-    "void rotateCursor(Cursor* cursor, int angle) {",
-    "   cursor->radius =  angle;",
-    "}",
-    "",
-    "void setCursorColor(Cursor* cursor, int r, int g, int b) {",
-    "   cursor->color.r = r;",
-    "   cursor->color.g = g;",
-    "   cursor->color.b = b;",
-    "}",
-    "",
-     "Cursor createCursor(Cursor* existingCursor, int x, int y) {",
-    "    if (existingCursor != NULL) {",
-    "        existingCursor->x = x;",
-    "        existingCursor->y = y;",
-    "        //Couleur par défaut",
-    "",        
-    "        return *existingCursor;  // Retourne le curseur modifié",
-    "    } else {",
-    "        Cursor newCursor;",
-    "        newCursor.x = x;",
-    "        newCursor.y = y;",
-    "        setCursorColor(&newCursor, 255, 255, 255);",
-    "        return newCursor;  // Retourne un nouveau curseur",
-    "    }",
-    "}"
-    "",
-]
 
 
-c_main_begin = [
-     "int main(int argc, char *argv[]) {",
-    "    // Initialisation de SDL",
-    "    printf(\"Initialisation de SDL...\\n\");",
-    "    if (SDL_Init(SDL_INIT_VIDEO) != 0) {",
-    "        printf(\"Erreur d'initialisation de SDL : %s\\n\", SDL_GetError());",
-    "        return 1;",
-    "    }",
-    "    SDL_Window* window = SDL_CreateWindow(\"Test SDL\", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);",
-    "    if (!window) {",
-    "        printf(\"Erreur de création de la fenêtre : %s\\n\", SDL_GetError());",
-    "        SDL_Quit();",
-    "        return 1;",
-    "    }",
-    "    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);",
-    "    if (!renderer) {",
-    "        printf(\"Erreur de création du renderer : %s\\n\", SDL_GetError());",
-    "        SDL_DestroyWindow(window);",
-    "        SDL_Quit();",
-    "        return 1;",
-    "    }",
-    "    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);",
-    "    SDL_RenderClear(renderer);",
-]
+# Initialisation de la fenetre principale
+compiler = ttk.Window(themename="flatly")  # Choose theme NV
+compiler.title('🎨Draw++ IDE')
+compiler.geometry("800x600")
+file_path = ''
 
-c_main_end = [
-    "    SDL_RenderPresent(renderer);",
-    "",
-    "    SDL_Delay(5000);",
-    "",
-    "    SDL_DestroyRenderer(renderer);",
-    "    SDL_DestroyWindow(window);",
-    "    SDL_Quit();",
-    "",
-    "    return EXIT_SUCCESS;",
-    "}"
-]
+# Fonctions de gestion des fichiers
+def set_file_path(path):
+    global file_path
+    file_path = path
 
-def HexToRGB(hex):
-    hex = hex.lstrip('#')
-    
-    r = int(hex[0:2], 16)
-    g = int(hex[2:4], 16)   
-    b = int(hex[4:6], 16)
-    
-    return r, g, b
+#initialisatioon des numeros de ligne 
+def update_line_number(event=None):
+    line_numbers = ""
+    for i in range(1, int(editor.index('end').split('.')[0])):  # Nombre de lignes dans l'editeur
+        line_numbers += f"{i}\n"
+    line_number_bar.config(state='normal')  # Permet d'ecrire dans le widget
+    line_number_bar.delete('1.0', END)  # Supprime l'ancien contenu
+    line_number_bar.insert('1.0', line_numbers)  # Ajoute les numeros de ligne
+    line_number_bar.config(state='disabled')  # Empeche la modification
+
+# Numero de ligne (barre a gauche)
+line_number_bar = Text(compiler, width=4, bg="lightgrey", state='disabled')
+line_number_bar.pack(side="left", fill="y")
 
 
-c_main_content = []
-created_cursors = set() # Stocker les curseurs créés
-# Étape 2 : Écrire le fichier C
-def get_instruction(parsed_output, depth=4):
-    """
-    Génère du code C basé sur une structure AST.
-    Traite les instructions `createCursor`.
-
-    :param parsed_output: Dictionnaire représentant l'AST.
-    :param depth: Profondeur actuelle pour l'indentation (utilisé pour déboguer).
-    """
-    #print('parsed_output in generate c', parsed_output)
-    indent = " " * depth
-    print(f"{indent}Parsed output received in generate_c_code.")
-
-    if isinstance(parsed_output, dict):
-        print(f"{indent}Processing root node.")
-        # Parcourir les enfants de la racine
-        children = parsed_output.get("children", [])
-        for node in children:
-            node_type = node.get("type")
-            
-            # Traiter les nœuds "createCursor"
-            if node_type == "createCursor":
-                print(f"{indent}Found 'createCursor' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
-                # Extraire le nœud "coordinates"
-                coordinates = next((child for child in node.get("children", []) if child.get("type") == "coordinates"), None)
-                
-                # Extraire les coordonnées x et y
-                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
-                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
-                
-                # Récupérer les valeurs
-                cursorId_value = cursorId.get("value")
-                x_value = x.get("value")
-                y_value = y.get("value")
-                
-                # Afficher les coordonnées validées
-                print(f"{indent}Cursor id={cursorId_value} coordinates: x={x_value}, y={y_value}.")
-                # Vérifiez si le curseur existe déjà
-                if cursorId_value in created_cursors:
-                    print(f"{indent}Cursor '{cursorId_value}' already exists. Updating its values.")
-                    c_main_content.append(f"moveCursor(&{cursorId_value}, {x_value}, {y_value});")
-                else:
-                    print(f"{indent}Creating new cursor '{cursorId_value}'.")
-                    created_cursors.add(cursorId_value)
-                    c_main_content.append(f"Cursor {cursorId_value} = {{ {x_value}, {y_value}, 0, 255, 255, 255 }};")
-                    
-            elif node_type == "move":
-                print(f"{indent}Found 'move' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
-                move = next((child for child in node.get("children",[]) if child.get("type") == "value"),None)
-                
-                cursorId_value = cursorId.get("value")
-                move_value = move.get("value")
-                c_main_content.append(f"moveCursor(&{cursorId_value}, {move_value}, {move_value});")
-            elif node_type == "setColor":
-                print(f"{indent}Found 'setColor' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
-                HexColor = next((child for child in node.get("children",[]) if child.get("type") == "color"),None)
-
-                cursorId_value = cursorId.get("value")  
-                r,g,b = HexToRGB(HexColor.get("value"))                
-                c_main_content.append(f"setCursorColor(&{cursorId_value}, {r}, {g},{b});")
-            elif node_type == "rotate":
-                print(f"{indent}Found 'rotate' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
-                angle = next((child for child in node.get("children",[]) if child.get("type") == "value"), None)
-                
-                cursorId_value = cursorId.get("value")
-                angle_value = angle.get("value")
-                #c_main_content.append(f"rotateCursor(&{cursorId_value}, {angle_value});")
-
-            elif node_type == "drawCircle":
-                print(f"{indent}Found 'drawCircle' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
-                radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
-                coordinates = next((child for child in node.get("children",[]) if child.get("type") == "coordinates"), None)
-                
-                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
-                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
-
-                cursorId_value = cursorId.get("value")
-                radius_value = radius.get("value")
-                x_value = x.get("value")
-                y_value = y.get("value")
-
-                c_main_content.append(f"draw_shape(renderer,\"circle\",{cursorId_value}, {x_value}, {y_value}, 1);")
-
-            elif node_type == "drawOval":
-                print(f"{indent}Found 'drawCircle' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
-                radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
-                coordinates = next((child for child in node.get("children",[]) if child.get("type") == "coordinates"), None)
-                
-                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
-                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
-
-                cursorId_value = cursorId.get("value")
-                radius_value = radius.get("value")
-                x_value = x.get("value")
-                y_value = y.get("value")
-
-                c_main_content.append(f"draw_shape(renderer,\"oval\",{cursorId_value}, {x_value}, {y_value}, 1, 1, 1);")
-                          
-            elif node_type == "drawLine":
-                print(f"{indent}Found 'drawLine' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
-                coordinates = node.get("children")[2]
-
-                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
-                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
-
-                cursorId_value = cursorId.get("value")
-                
-                x_value = x.get("value")
-                y_value = y.get("value")
-
-                c_main_content.append(f"draw_shape(renderer,\"ligne\",{cursorId_value}, {x_value}, {y_value}, 1);")
-                
-            elif node_type == "drawRectangle":
-                print(f"{indent}Found 'drawRectangle' node.")
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
-                width = next((child for child in node.get("children",[]) if child.get("type") == "width"), None)
-                height = next((child for child in node.get("children",[]) if child.get("type") == "height"), None)
-                coordinates = next((child for child in node.get("children",[]) if child.get("type") == "coordinates"), None)
-
-                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
-                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
-
-                cursorId_value = cursorId.get("value")
-                width_value = width.get("value")
-                height_value = height.get("value")
-                x_value = x.get("value")
-                y_value = y.get("value")
-
-                c_main_content.append(f"draw_shape(renderer, \"rectangle\",{cursorId_value}, {height_value}, {width_value}, 1);")
-
-            elif node_type == "drawArc":
-                cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
-                radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
-                angle = next((child for child in node.get("children",[]) if child.get("type") == "start_angle"), None)
-
-                cursorId_value = cursorId.get("value")
-                radius_value = radius.get("value")
-                angle_value = angle.get("value")
-
-                c_main_content.append(f"draw_shape(renderer,\"arc\",{cursorId_value}, {radius_value}, {angle_value}, 1);")
-                #draw_shape(renderer, "arc",cursor1, 10, 5,1);
-            elif node_type == "assignment":
-                assignmentId_value = node.get("value") 
-                assignment_type = next((child for child in node.get("children", []) if child.get("type") == "number"), None)
-                if assignment_type:
-                    assignment_value = assignment_type.get("value")
-                    c_main_content.append(f"int {assignmentId_value} = {assignment_value};") 
-            elif node_type == "if":
-                # Générer le code pour la condition
-                comparaison = next((child for child in node.get("children", []) if child.get("type") == "comparison"), None)
-                if comparaison:
-                    operator = comparaison.get("value")
-                    left = comparaison.get("children", [])[0]
-                    right = comparaison.get("children", [])[1]
-
-                    left_value = left.get("value") 
-                    right_value = right.get("value") 
-
-                    # Ajouter la condition "if" au contenu
-                    c_main_content.append(f"if ({left_value} {operator} {right_value}) {{")
-                    print(f"Condition: if ({left_value} {operator} {right_value})")
-                else:
-                    # Si aucune comparaison, afficher un message d'erreur pour le debug
-                    print("Erreur : aucune comparaison trouvée dans le bloc if.")
-
-                # Vérifier si un bloc "else" est présent
-                elsecdt = next((child for child in node.get("children", []) if child.get("type") == "else"), None)
-
-                # Générer le code pour le bloc "program" associé au "if"
-                program_node = next((child for child in node.get("children", []) if child.get("type") == "program"), None)
-                if program_node:
-                    get_instruction(program_node)
-
-                # Si pas de bloc "else", fermer le bloc "if"
-                if not elsecdt:
-                    c_main_content.append("}")  # Fermer le bloc "if"
-
-                # Gérer le bloc "else" s'il est présent
-                if elsecdt:
-                    c_main_content.append("} else {")  # Ajouter la déclaration "else"
-                    # Générer le code pour le programme du bloc "else"
-                    else_program_node = next((child for child in elsecdt.get("children", []) if child.get("type") == "program"), None)
-                    if else_program_node:
-                        get_instruction(else_program_node)
-                    c_main_content.append("}")  # Fermer le bloc "else"
+def new_file():
+    editor.delete('1.0', END)
+    set_file_path('')
+    compiler.title("New File - Draw++ IDE")
+    update_line_number()
 
 
-            elif node_type == "while":
-                print(f"{indent}Found 'while' node.")
-                comparaison = next((child for child in node.get("children", []) if child.get("type") == "comparaison"), None)
-                if comparaison:
-                    operator = comparaison.get("value")
-                    left = comparaison.get("children", [])[0]
-                    right = comparaison.get("children", [])[1]
+def open_file():
+    path = askopenfilename(filetypes=[("Draw++ Files", "*.dpp"), ("All Files", "*.*")])
+    if path:
+        with open(path, 'r') as file:
+            code = file.read()
+            editor.delete('1.0', END)
+            editor.insert('1.0', code)
+        set_file_path(path)
+        compiler.title(f"{path} - Draw++ IDE")
 
-                    left_value = left.get("value") 
-                    right_value = right.get("value") 
 
-                    c_main_content.append(f"while ({left_value} {operator} {right_value}) {{")
-            else:
-                print(f"{indent}Skipping node of type '{node_type}'.")
-
+def save_file():
+    if file_path == '':
+        path = asksaveasfilename(defaultextension=".dpp",
+                                 filetypes=[("Draw++ Files", "*.dpp"), ("All Files", "*.*")])
+        if path:
+            set_file_path(path)
     else:
-        raise TypeError("Expected 'parsed_output' to be a dictionary representing the AST.")
+        path = file_path
+    with open(path, 'w') as file:
+        code = editor.get('1.0', END)
+        file.write(code)
+    compiler.title(f"{path} - Draw++ IDE")
 
-def generate_c_code(parsed_output):
-    get_instruction(parsed_output)
-    complete_code = c_header + c_draw_shape_func + c_main_begin + c_main_content + c_main_end
-    print(f"c_main_content: {c_main_content}")
-    filename = "Output.c"
-    with open(filename, "w") as file:
-        file.write("\n".join(complete_code))
 
-    print(f"Code C écrit dans le fichier : {filename}")
+# Ajout de la gestion des themes
+is_dark_mode = False  # Variable pour garder la trace du theme actuel
 
-    # Étape 3 : Compiler le fichier C sur Windows
-    compile_command = f"gcc {filename} -o output -I include -L lib -lmingw32 -lSDL2main -lSDL2"
+#fontion pour changer de themee
+def toggle_theme():
+    global is_dark_mode
+    is_dark_mode = not is_dark_mode
+    
+    if is_dark_mode:
+        editor.config(bg="black", fg="light gray", insertbackground="light gray")
+        output_display.config(bg="black", fg="white")  # Noir pour le fond, blanc pour le texte
+        line_number_bar.config(bg="dim gray", fg="white")  # Gris fonce pour la barre de numeros
+        compiler.config(bg="gray20")
+    else:
+        editor.config(bg="white", fg="black", insertbackground="black")
+        output_display.config(bg="white", fg="black")
+        line_number_bar.config(bg="white", fg="black")
+        compiler.config(bg="SystemButtonFace")
+
+
+def update_syntax_highlighting(event=None):
+    """
+    Tokenize the code and apply syntax highlighting.
+    """
+    code = editor.get("1.0", END)
+    tokens = tokenize(code)
+    
+    # Supprimer les balises précédentes
+    editor.tag_remove("KEYWORD", "1.0", "end")
+    editor.tag_remove("IDENTIFIER", "1.0", "end")
+    editor.tag_remove("NUMBER", "1.0", "end")
+    editor.tag_remove("HEX_COLOR", "1.0", "end")
+    editor.tag_remove("OPERATOR", "1.0", "end")
+    editor.tag_remove("ARITHMETIC_OP", "1.0", "end")
+    editor.tag_remove("DELIMITER", "1.0", "end")
+    
+    # Ajouter de nouvelles balises en fonction des tokens
+    for token in tokens:
+        start_index = f"{token.line}.{token.column}"
+        end_index = f"{token.line}.{token.column + len(token.value)}"
+        
+        if token.type == 'KEYWORD':
+            editor.tag_add("KEYWORD", start_index, end_index)
+        elif token.type == 'IDENTIFIER':
+            editor.tag_add("IDENTIFIER", start_index, end_index)
+        elif token.type == 'NUMBER':
+            editor.tag_add("NUMBER", start_index, end_index)
+        elif token.type == 'HEX_COLOR':
+            editor.tag_add("HEX_COLOR", start_index, end_index)
+        elif token.type == 'OPERATOR':
+            editor.tag_add("OPERATOR", start_index, end_index)
+        elif token.type == 'ARITHMETIC_OP':
+            editor.tag_add("ARITHMETIC_OP", start_index, end_index)
+        elif token.type == 'DELIMITER':
+            editor.tag_add("DELIMITER", start_index, end_index)
+
+def on_key_release(event=None): #permet de mettre a jour les n de ligne et applique la coloration en evitant les conflits entre les deux fonctions 
+    
+    update_line_number()  # Mettre à jour les numéros de ligne
+    update_syntax_highlighting()  # Appliquer la coloration syntaxique
+def save_ast_to_json(parsed_output, filename="ast_output.json"):
     try:
-        subprocess.run(compile_command, shell=True, check=True)
-        print("Compilation réussie.")
-    except subprocess.CalledProcessError as e:
-        print(f"Erreur lors de la compilation : {e}")
-        exit(1)
+        # Convertir l'AST en dictionnaire compatible JSON
+        if isinstance(parsed_output, ASTNode):
+            parsed_output = parsed_output.to_dict()
 
-    # Étape 4 : Exécuter le programme compilé sur Windows
-    run_command = "output.exe"  
+        # Enregistrer l'AST dans un fichier JSON
+        with open(filename, 'w') as json_file:
+            json.dump(parsed_output, json_file, indent=4)
+        print(f"L'AST a été enregistré dans {filename}")
+    except Exception as e:
+        print(f"Erreur lors de l'enregistrement de l'AST : {str(e)}")
+
+def run():
+    code = editor.get("1.0", END)
+    editor.tag_remove("ERROR", "1.0", END)  # Nettoyer les erreurs précédentes
     try:
-        result = subprocess.run(run_command, shell=True, check=True, capture_output=True, text=True)
-        print("Exécution réussie.")
-        print("Sortie du programme :")
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"Erreur lors de l'exécution : {e}")
-        print(e.stderr)
+        tokens = tokenize(code)
+        parser = Parser(tokens)
 
+        parsed_output = parser.parse_program()
+        validate_program(parsed_output)
+        
+        output_display.delete('1.0', END)
+        output_display.insert('1.0', f"Parsed Output:\n{parsed_output}")
+         
+        generate_c_code(parsed_output.to_dict())
+        #save_ast_to_json(parsed_output)
+    except SyntaxError as e:
+        output_display.delete('1.0', END)
+        output_display.insert('1.0', f"Syntax Error: {str(e)}")
+        
+        error_message = str(e)
+        line, column = extract_line_column_from_error(error_message)
+        
+        # Définir les indices de début et de fin pour la balise d'erreur
+        start_index = f"{line}.{column}"
+        
+        # Trouver la fin du mot en utilisant les espaces ou les délimiteurs
+        end_index = f"{line}.{column}"
+        while editor.get(end_index) not in (' ', '\n', '\t', '', '(', ')', '{', '}', '[', ']', ';', ':', ','):
+            end_index = f"{line}.{int(end_index.split('.')[1]) + 1}"
+        
+        # Ajouter la balise d'erreur
+        editor.tag_add("ERROR", start_index, end_index)
+        editor.tag_config("ERROR", underline=True, foreground="red")
+    except Exception as e:
+        output_display.delete('1.0', END)
+        output_display.insert('1.0', f"Error: {str(e)}")
+
+def extract_line_column_from_error(error_message):
+    # Extraire les informations de ligne et de colonne du message d'erreur
+    import re
+    match = re.search(r"line (\d+), column (\d+)", error_message)
+    if match:
+        line = int(match.group(1))
+        column = int(match.group(2))
+        return line, column
+    return 1, 0  # Valeurs par défaut si l'extraction échoue
+
+
+# Creation des menus
+menu_bar = Menu(compiler)
+
+file_menu = Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="New", command=new_file)
+file_menu.add_command(label="Open", command=open_file)
+file_menu.add_command(label="Save", command=save_file)
+file_menu.add_command(label="Save As", command=save_file)
+file_menu.add_command(label="Exit", command=compiler.quit)
+menu_bar.add_cascade(label="File", menu=file_menu)
+
+run_menu = Menu(menu_bar, tearoff=0)
+run_menu.add_command(label="Run", command=run)
+menu_bar.add_cascade(label="Run", menu=run_menu)
+
+settings_menu = Menu(menu_bar,tearoff=0)
+settings_menu.add_command(label="Toggle Theme", command=toggle_theme)
+menu_bar.add_cascade(label="Settings", menu=settings_menu)
+
+compiler.config(menu=menu_bar)
+
+
+# Zones de texte
+editor = Text(compiler, wrap="word", undo=True)
+editor.pack(expand=True, fill='both')
+editor.bind("<KeyRelease>", on_key_release)
+
+
+# Ajout des styles pour la coloration syntaxique
+editor.tag_configure("KEYWORD", foreground="blue")  # Mots-clés
+editor.tag_configure("IDENTIFIER", foreground="magenta")  # Identifiants
+editor.tag_configure("NUMBER", foreground="darkorange")  # Nombres
+editor.tag_configure("HEX_COLOR", foreground="green")  # Couleurs hexadécimales
+editor.tag_configure("OPERATOR", foreground="purple")  # Opérateurs
+editor.tag_configure("ARITHMETIC_OP", foreground="darkred")  # Opérateurs arithmétiques
+editor.tag_configure("DELIMITER", foreground="grey")  # Délimiteurs
+editor.tag_configure("ERROR", underline=True, foreground="red")
+
+
+output_display = Text(compiler, height=10, bg="lightgrey", fg="black")
+output_display.pack(fill="both")
+# Add a status bar
+status_bar = Label(compiler, text="Draw++ IDE - Ready", anchor=W, relief=SUNKEN)
+status_bar.pack(side=BOTTOM, fill=X)
+
+compiler.mainloop()
