@@ -2,7 +2,7 @@ import subprocess
 import os
 import time
 from parser  import ASTNode
-from semantic_analyzer import evaluate_expression
+
 
 """
     Programme C initial stocké dans des listes: c_header, c_draw_shape_func, c_main_begin et c_main_end.
@@ -60,7 +60,7 @@ c_draw_shape_function = [
     "    switch (type) {",
     "        case SHAPE_LINE:",
     "            for (int i = 0; i < t; i++) {",
-    "                 SDL_RenderDrawLine(renderer, cursor.x, cursor.y, x2, y2);"
+    "                SDL_RenderDrawLine(renderer, cursor.x, cursor.y, x2, y2);",
     "            }",
     "            break;",
     "        case SHAPE_RECTANGLE: {",
@@ -133,8 +133,7 @@ c_draw_shape_function = [
     "    }",
     "}"
     "",
-    "// fonctions pour le curseur",
-    "",
+    "//Fonctions du curseur",
     "void moveCursor(Cursor* cursor, int x, int y) {",
     "    cursor->x = x;",
     "    cursor->y = y;",
@@ -173,7 +172,7 @@ c_draw_shape_function = [
 
 
 c_main_begin = [
-     "int main(int argc, char *argv[]) {",
+    "int main(int argc, char *argv[]) {",
     "    // Initialisation de SDL",
     "    printf(\"Initialisation de SDL...\\n\");",
     "    if (SDL_Init(SDL_INIT_VIDEO) != 0) {",
@@ -250,8 +249,8 @@ c_main_content = []
 # Étape 2 : Écrire le fichier C
 def get_instruction(parsed_output, depth=4):
     """
-    Génère du code C basé sur une structure AST.
-    Traite les instructions `createCursor`.
+    Génère les instructions en C basé sur une structure AST.
+    Traite les instructions.
 
     :param parsed_output: Dictionnaire représentant l'AST.
     :param depth: Profondeur actuelle pour l'indentation (utilisé pour déboguer).
@@ -301,6 +300,7 @@ def get_instruction(parsed_output, depth=4):
                 cursorId_value = cursorId.get("value")
                 move_value = move.get("value")
                 c_main_content.append(f"moveCursor(&{cursorId_value}, {move_value}, {move_value});")
+
             elif node_type == "setColor":
                 print(f"{indent}Found 'setColor' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
@@ -325,7 +325,6 @@ def get_instruction(parsed_output, depth=4):
                 cursorId_value = cursorId.get("value")
                 angle_value = angle.get("value")
                 c_main_content.append(f"rotateCursor(&{cursorId_value}, {angle_value});")
-
             elif node_type == "drawCircle":
                 print(f"{indent}Found 'drawCircle' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
@@ -341,7 +340,6 @@ def get_instruction(parsed_output, depth=4):
                 y_value = y.get("value")
 
                 c_main_content.append(f"draw_shape(renderer,\"circle\",{cursorId_value}, {x_value}, {y_value}, {radius_value});")
-
             elif node_type == "drawOval":
                 print(f"{indent}Found 'drawCircle' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
@@ -356,8 +354,7 @@ def get_instruction(parsed_output, depth=4):
                 x_value = x.get("value")
                 y_value = y.get("value")
 
-                c_main_content.append(f"draw_shape(renderer,\"oval\",{cursorId_value}, {x_value}, {y_value}, 1, 1, 1);")
-                          
+                c_main_content.append(f"draw_shape(renderer,\"oval\",{cursorId_value}, {x_value}, {y_value}, 1, 1, 1);")             
             elif node_type == "drawLine":
                 print(f"{indent}Found 'drawLine' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
@@ -371,8 +368,7 @@ def get_instruction(parsed_output, depth=4):
                 x_value = x.get("value")
                 y_value = y.get("value")
 
-                c_main_content.append(f"draw_shape(renderer,\"ligne\",{cursorId_value}, {x_value}, {y_value}, 1);")
-                
+                c_main_content.append(f"draw_shape(renderer,\"ligne\",{cursorId_value}, {x_value}, {y_value}, 1);")   
             elif node_type == "drawRectangle":
                 print(f"{indent}Found 'drawRectangle' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
@@ -390,19 +386,20 @@ def get_instruction(parsed_output, depth=4):
                 y_value = y.get("value")
 
                 c_main_content.append(f"draw_shape(renderer, \"rectangle\",{cursorId_value}, {height_value}, {width_value}, 1);")
-
             elif node_type == "drawArc":
                 print(f"{indent}Found 'drawArc' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
                 radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
-                angle = next((child for child in node.get("children",[]) if child.get("type") == "start_angle"), None)
-
+                coordinates = next((child for child in node.get("children",[]) if child.get("type") == "coordinates"), None)
+                
+                x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
+                y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
                 cursorId_value = cursorId.get("value")
                 radius_value = radius.get("value")
-                angle_value = angle.get("value")
+                x_value = x.get("value")
+                y_value = y.get("value")
 
-                c_main_content.append(f"draw_shape(renderer,\"arc\",{cursorId_value}, {radius_value}, {angle_value}, 1);")
-                
+                c_main_content.append(f"draw_shape(renderer,\"arc\",{cursorId_value}, {x_value}, {y_value}, {radius_value});")             
             elif node_type == "assignment":
                 print(f"{indent}Found 'assignment' node.")
                 assignment_id = node.get("value")
@@ -469,7 +466,6 @@ def get_instruction(parsed_output, depth=4):
                     if program_node:
                         get_instruction(program_node)
                     c_main_content.append("}")
-
             else:
                 print(f"{indent}Skipping node of type '{node_type}'.")
 
@@ -487,7 +483,7 @@ def generate_c_code(parsed_output):
 
     print(f"Code C écrit dans le fichier temporaire : {filename}")
 
-    # Étape 3 : Compiler le fichier C sur Windows
+    # Compiler le fichier C sur Windows
     compile_command = f"gcc {filename} -o output -I include -L lib -lmingw32 -lSDL2main -lSDL2"
     try:
         subprocess.run(compile_command, shell=True, check=True)
@@ -496,7 +492,7 @@ def generate_c_code(parsed_output):
         print(f"Erreur lors de la compilation : {e}")
         exit(1)
 
-    # Étape 4 : Exécuter le programme compilé sur Windows
+    # Exécuter le programme compilé sur Windows
     run_command = "output.exe"  
     try:
         result = subprocess.run(run_command, shell=True, check=True, capture_output=True, text=True)
@@ -509,6 +505,7 @@ def generate_c_code(parsed_output):
     try:
         if os.path.exists(filename):
             os.remove(filename)
+            os.remove("output.exe")
             print(f"Fichier {filename} supprimé après délai.")
         else:
             print(f"Fichier {filename} introuvable pour suppression.")
