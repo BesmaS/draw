@@ -158,7 +158,7 @@ c_draw_shape_function = [
     "}",
     "",
      "Cursor createCursor(Cursor* existingCursor, int x, int y) {",
-    "    if (existingCursor != None) {",
+    "    if (existingCursor != NULL) {",
     "        existingCursor->x = x;",
     "        existingCursor->y = y;",
     "        //Couleur par défaut",
