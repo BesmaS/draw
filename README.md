@@ -10,7 +10,7 @@ Before you can build and run Draw++, ensure you have the following installed:
 
 - SDL2
 - Python 3.x
-- GCC (or another C compiler)
+- GCC 
 
 ## Installation
 
