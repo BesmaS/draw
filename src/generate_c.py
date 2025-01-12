@@ -1,7 +1,13 @@
 import subprocess
 import os
 import time
-# Étape 1 : Programme C stocké dans une liste
+from parser  import ASTNode
+from semantic_analyzer import evaluate_expression
+
+"""
+    Programme C initial stocké dans des listes: c_header, c_draw_shape_func, c_main_begin et c_main_end.
+    Le code est séparé en plusieurs liste pour faciliter l'ajout des instructions ainsi que la lecture du code.
+"""
 c_header = [
     "#include <SDL2/SDL.h>",
     "#include <stdio.h>",
@@ -34,7 +40,6 @@ c_header = [
     "} Cursor;",
     "",
 ]
-
 
 c_draw_shape_func = [
     "ShapeType get_shape_type(const char* shape_type) {                  // retourne le type de forme",
@@ -153,7 +158,7 @@ c_draw_shape_func = [
     "}",
     "",
      "Cursor createCursor(Cursor* existingCursor, int x, int y) {",
-    "    if (existingCursor != NULL) {",
+    "    if (existingCursor != None) {",
     "        existingCursor->x = x;",
     "        existingCursor->y = y;",
     "        //Couleur par défaut",
@@ -210,6 +215,11 @@ c_main_end = [
 ]
 
 def HexToRGB(hex):
+    """
+    Évalue récursivement une opération.
+    Retourne une chaîne représentant l'expression C.
+    :param ast: Nœud enfant de l'AST.
+    """
     hex = hex.lstrip('#')
     
     r = int(hex[0:2], 16)
@@ -217,6 +227,27 @@ def HexToRGB(hex):
     b = int(hex[4:6], 16)
     
     return r, g, b
+
+def evaluate_operation(node):
+    """
+    Évalue récursivement une opération.
+    Retourne une chaîne représentant l'expression C.
+    :param ast: Nœud enfant de l'AST.
+    """
+    node_type = node.get("type")
+    
+    if node_type == "number":
+        return str(node.get("value"))
+    elif node_type == "variable":
+        return node.get("value")
+    elif node_type == "operation":
+        # Obtenir les enfants gauche et droite
+        left = evaluate_operation(node.get("children")[0])
+        right = evaluate_operation(node.get("children")[1])
+        operator = node.get("value")  # Opérateur (+, -, *, /, etc.)
+        return f"({left} {operator} {right})"
+    else:
+        raise ValueError(f"Type de nœud inattendu: {node_type}")
 
 global c_main_content
 c_main_content = []
@@ -232,7 +263,8 @@ def get_instruction(parsed_output, depth=4):
     #print('parsed_output in generate c', parsed_output)
     indent = " " * depth
     print(f"{indent}Parsed output received in generate_c_code.")
-    created_variable = set() # Stocker les curseurs créés
+    declared_variables = set() # Stocker les variables créées
+    
     if isinstance(parsed_output, dict):
         print(f"{indent}Processing root node.")
         # Parcourir les enfants de la racine
@@ -244,27 +276,25 @@ def get_instruction(parsed_output, depth=4):
             if node_type == "createCursor":
                 print(f"{indent}Found 'createCursor' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "identifiant"), None)
-                # Extraire le nœud "coordinates"
+
                 coordinates = next((child for child in node.get("children", []) if child.get("type") == "coordinates"), None)
                 
-                # Extraire les coordonnées x et y
                 x = next((child for child in coordinates.get("children", []) if child.get("type") == "x"), None)
                 y = next((child for child in coordinates.get("children", []) if child.get("type") == "y"), None)
                 
-                # Récupérer les valeurs
+
                 cursorId_value = cursorId.get("value")
                 x_value = x.get("value")
                 y_value = y.get("value")
                 
-                # Afficher les coordonnées validées
                 print(f"{indent}Cursor id={cursorId_value} coordinates: x={x_value}, y={y_value}.")
                 # Vérifiez si le curseur existe déjà
-                if cursorId_value in created_variable:
+                if cursorId_value in declared_variables:
                     print(f"{indent}Cursor '{cursorId_value}' already exists. Updating its values.")
                     c_main_content.append(f"moveCursor(&{cursorId_value}, {x_value}, {y_value});")
                 else:
                     print(f"{indent}Creating new cursor '{cursorId_value}'.")
-                    created_variable.add(cursorId_value)
+                    declared_variables.add(cursorId_value)
                     c_main_content.append(f"Cursor {cursorId_value} = {{ {x_value}, {y_value}, 0, 1, {{0, 0, 0}} }};")
                     
             elif node_type == "move":
@@ -366,6 +396,7 @@ def get_instruction(parsed_output, depth=4):
                 c_main_content.append(f"draw_shape(renderer, \"rectangle\",{cursorId_value}, {height_value}, {width_value}, 1);")
 
             elif node_type == "drawArc":
+                print(f"{indent}Found 'drawArc' node.")
                 cursorId = next((child for child in node.get("children",[]) if child.get("type") == "cursor"), None)
                 radius = next((child for child in node.get("children",[]) if child.get("type") == "radius"), None)
                 angle = next((child for child in node.get("children",[]) if child.get("type") == "start_angle"), None)
@@ -375,20 +406,23 @@ def get_instruction(parsed_output, depth=4):
                 angle_value = angle.get("value")
 
                 c_main_content.append(f"draw_shape(renderer,\"arc\",{cursorId_value}, {radius_value}, {angle_value}, 1);")
-                #draw_shape(renderer, "arc",cursor1, 10, 5,1);
+                
             elif node_type == "assignment":
-                assignmentId_value = node.get("value") 
-                assignment_type = next((child for child in node.get("children", []) if child.get("type") == "number"), None)
-                if assignment_type:
-                    assignment_value = assignment_type.get("value")
-                    if assignmentId_value in created_variable:
-                        print(f"{indent}Variable '{assignmentId_value}' already exists. Updating its value.")
-                        c_main_content.append(f"{assignmentId_value} = {assignment_value};")
-                    else:
-                        c_main_content.append(f"int {assignmentId_value} = {assignment_value};")
-                        created_variable.add(assignmentId_value) 
+                print(f"{indent}Found 'assignment' node.")
+                assignment_id = node.get("value")
+                
+                value_node = node.get("children")[0]
+                value_expression = evaluate_operation(value_node)
+                
+                if assignment_id in declared_variables:
+                    print(f"{indent}Variable '{assignment_id}' already exists. Updating its value.")
+                    c_main_content.append(f"{assignment_id} = {value_expression};")
+                else:
+                    print(f"{indent}Creating new variable '{assignment_id}' with value '{value_expression}'.")
+                    c_main_content.append(f"int {assignment_id} = {value_expression};")
+                    declared_variables.add(assignment_id)
             elif node_type == "if":
-                # Générer le code pour la condition
+                print(f"{indent}Found 'if' node.")
                 comparaison = next((child for child in node.get("children", []) if child.get("type") == "comparison"), None)
                 if comparaison:
                     operator = comparaison.get("value")
@@ -401,30 +435,25 @@ def get_instruction(parsed_output, depth=4):
                     # Ajouter la condition "if" au contenu
                     c_main_content.append(f"if ({left_value} {operator} {right_value}) {{")
                     print(f"Condition: if ({left_value} {operator} {right_value})")
-                else:
-                    # Si aucune comparaison, afficher un message d'erreur pour le debug
-                    print("Erreur : aucune comparaison trouvée dans le bloc if.")
-
-                # Vérifier si un bloc "else" est présent
-                elsecdt = next((child for child in node.get("children", []) if child.get("type") == "else"), None)
-
-                # Générer le code pour le bloc "program" associé au "if"
+        
+                # programme de la condition "if"
                 program_node = next((child for child in node.get("children", []) if child.get("type") == "program"), None)
                 if program_node:
                     get_instruction(program_node)
 
-                # Si pas de bloc "else", fermer le bloc "if"
+                # Vérifier si un bloc "else" est présent
+                elsecdt = next((child for child in node.get("children", []) if child.get("type") == "else"), None)
                 if not elsecdt:
-                    c_main_content.append("}")  # Fermer le bloc "if"
+                    c_main_content.append("}")  #
 
                 # Gérer le bloc "else" s'il est présent
                 if elsecdt:
-                    c_main_content.append("} else {")  # Ajouter la déclaration "else"
-                    # Générer le code pour le programme du bloc "else"
+                    c_main_content.append("} else {")  
+                    
                     else_program_node = next((child for child in elsecdt.get("children", []) if child.get("type") == "program"), None)
                     if else_program_node:
                         get_instruction(else_program_node)
-                    c_main_content.append("}")  # Fermer le bloc "else"
+                    c_main_content.append("}")  
 
 
             elif node_type == "while":
@@ -439,6 +468,7 @@ def get_instruction(parsed_output, depth=4):
                     right_value = right.get("value") 
                     
                     c_main_content.append(f"while ({left_value} {operator} {right_value}) {{")
+                    # programme de la condition "while"
                     program_node = next((child for child in node.get("children", []) if child.get("type") == "program"), None)
                     if program_node:
                         get_instruction(program_node)
@@ -459,7 +489,7 @@ def generate_c_code(parsed_output):
     with open(filename, "w") as file:
         file.write("\n".join(complete_code))
 
-    print(f"Code C écrit dans le fichier : {filename}")
+    print(f"Code C écrit dans le fichier temporaire : {filename}")
 
     # Étape 3 : Compiler le fichier C sur Windows
     compile_command = f"gcc {filename} -o output -I include -L lib -lmingw32 -lSDL2main -lSDL2"
@@ -488,3 +518,4 @@ def generate_c_code(parsed_output):
             print(f"Fichier {filename} introuvable pour suppression.")
     except Exception as e:
             print(f"Erreur lors de la suppression du fichier : {e}")
+
